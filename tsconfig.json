@@ -1,0 +1,13 @@
+{
+  "compilerOptions": {
+    "target": "ESNext",
+    "lib": ["DOM", "DOM.Iterable", "ESNext"], // Quan trọng nhất là dòng này để hiểu thẻ <div>, <main>
+    "jsx": "react-jsx", // Để hiểu cú pháp React
+    "moduleResolution": "node",
+    "skipLibCheck": true, // Bảo TS bỏ qua việc kiểm tra lỗi trong các thư viện (node_modules)
+    "baseUrl": ".",
+    "paths": {
+      "*": ["node_modules/*"]
+    }
+  }
+}
