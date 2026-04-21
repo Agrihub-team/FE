@@ -81,7 +81,10 @@ const AdminDashboard = () => {
       return d >= start.getTime() && d <= end.getTime();
     });
 
-    let revenue = 0;
+    let revenue = 0; // tổng đã thanh toán
+    let revenueDelivered = 0; // đã giao
+    let revenuePending = 0; // chưa giao
+    let revenueCancelled = 0; // đã hủy
     const orderStats = { pending: 0, confirmed: 0, preparing: 0, shipped: 0, delivered: 0, cancelled: 0 };
     let deliveredCount = 0;
 
@@ -99,14 +102,27 @@ const AdminDashboard = () => {
       else orderStats.pending++;
 
       // TÍNH DOANH THU CHUẨN (Loại trừ tuyệt đối đơn Đã hủy/Thất bại)
-      if (o.status !== 'cancelled' && o.status !== 'failed') {
-        // Đã thanh toán online hoặc chuyển khoản
-        const isPaidOnline = o.paymentStatus === 'paid' || o.paymentStatus === 'success' || o.isPaid === true;
-        
-        // Cộng tiền nếu: Đã Giao thành công (COD) HOẶC Đã thanh toán trước
-        if (o.status === 'delivered' || isPaidOnline) {
-          revenue += Number(o.totalAmount || 0);
-        }
+      const isPaidOnline =
+        o.paymentStatus === 'paid' ||
+        o.paymentStatus === 'success' ||
+        o.isPaid === true;
+
+      if (!isPaidOnline) return;
+
+      const amount = Number(o.totalAmount || 0);
+
+      // 👉 Tổng (ô lớn)
+      revenue += amount;
+
+      // 👉 Phân loại
+      if (o.status === 'delivered') {
+        revenueDelivered += amount;
+      } 
+      else if (o.status === 'cancelled' || o.status === 'failed') {
+        revenueCancelled += amount;
+      } 
+      else {
+        revenuePending += amount;
       }
     });
 
@@ -206,7 +222,17 @@ const AdminDashboard = () => {
 
     return {
       periodOrders: pOrders,
-      stats: { revenue, orders: pOrders.length, customers: allUsers.length, warnings: lowStockAlerts.length, orderStats, deliveredCount },
+      stats: { 
+          revenue,
+          revenueDelivered,
+          revenuePending,
+          revenueCancelled,
+          orders: pOrders.length,
+          customers: allUsers.length,
+          warnings: lowStockAlerts.length,
+          orderStats,
+          deliveredCount
+        },
       chartData: cData,
       topProducts: topProds,
       finalCategories: finCats,
@@ -263,13 +289,57 @@ const AdminDashboard = () => {
         {/* 🟢 TOP CARDS */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
           
-          {/* Card Doanh thu */}
-          <div className="bg-white p-6 border border-gray-200 shadow-sm border-t-4 border-t-[#047857] rounded-xl flex flex-col justify-between">
-            <p className="text-xs font-bold text-gray-500 uppercase tracking-wide">Doanh thu ({timeFilter} ngày)</p>
-            <h2 className="text-2xl font-black text-[#047857] mt-2">{stats.revenue.toLocaleString()}đ</h2>
-            <p className="text-[10px] text-gray-400 mt-2 font-medium bg-gray-50 p-1.5 rounded-md w-fit">Đã loại trừ đơn Hủy/Thất bại</p>
+        {/* Card Doanh thu */}
+        <div className="bg-white p-6 border border-gray-200 shadow-sm border-t-4 border-t-[#047857] rounded-xl flex flex-col justify-between relative group cursor-pointer">
+          
+          {/* Title */}
+          <p className="text-xs font-bold text-gray-500 uppercase tracking-wide">
+            Doanh thu tổng ({timeFilter} ngày)
+          </p>
+
+          {/* Tổng tiền */}
+          <h2 className="text-2xl font-black text-[#047857] mt-2">
+            {stats.revenue.toLocaleString()}đ
+          </h2>
+
+          {/* Note */}
+          <p className="text-[10px] text-gray-400 mt-2 font-medium bg-gray-50 p-1.5 rounded-md w-fit">
+            Tổng tiền đã thanh toán
+          </p>
+
+          {/* 🔥 POPUP HOVER */}
+          <div className="absolute top-full left-0 mt-2 w-full bg-white border border-gray-200 shadow-lg rounded-xl p-4 opacity-0 translate-y-2 group-hover:opacity-100 group-hover:translate-y-0 transition-all duration-200 z-50 pointer-events-none">
+            
+            <div className="space-y-2 text-xs font-bold text-gray-600">
+
+              {/* Doanh thu thật */}
+              <div className="flex justify-between">
+                <span>Doanh thu ({timeFilter} ngày)</span>
+                <span className="text-green-600">
+                  {stats.revenueDelivered.toLocaleString()}đ
+                </span>
+              </div>
+
+              {/* Doanh thu chờ */}
+              <div className="flex justify-between">
+                <span>Doanh thu chờ ({timeFilter} ngày)</span>
+                <span className="text-yellow-600">
+                  {stats.revenuePending.toLocaleString()}đ
+                </span>
+              </div>
+
+              {/* Doanh thu huỷ */}
+              <div className="flex justify-between">
+                <span>Doanh thu đã hủy ({timeFilter} ngày)</span>
+                <span className="text-red-500">
+                  {stats.revenueCancelled.toLocaleString()}đ
+                </span>
+              </div>
+
+            </div>
           </div>
 
+        </div>
           {/* Card Tổng đơn hàng (Đã gắn link) */}
           <div 
             onClick={() => window.location.href = '/admin/orders'}

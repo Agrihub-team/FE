@@ -29,6 +29,8 @@ export const ProductManagement = () => {
   const [importSearchTerm, setImportSearchTerm] = useState("");
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const dropdownRef = useRef(null);
+  const typeDropdownRef = useRef(null);
+  const [openTypeDropdown, setOpenTypeDropdown] = useState(null);
 
   // State Form Thêm/Sửa
   const [form, setForm] = useState({
@@ -37,6 +39,8 @@ export const ProductManagement = () => {
     brand_id: "",
     description: "",
     image: "",
+    type: "normal",              
+    discount_percent: 0,         
     min_stock_kg: 100,  
     min_stock_25kg: 5,  
     min_stock_50kg: 5,  
@@ -74,15 +78,22 @@ export const ProductManagement = () => {
 
   useEffect(() => { loadData(); }, []);
 
-  useEffect(() => {
-    const handleClickOutside = (event) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
-        setIsDropdownOpen(false);
-      }
-    };
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, []);
+useEffect(() => {
+  const handleClickOutside = (event) => {
+    if (
+      dropdownRef.current &&
+      !dropdownRef.current.contains(event.target) &&
+      typeDropdownRef.current &&
+      !typeDropdownRef.current.contains(event.target)
+    ) {
+      setIsDropdownOpen(false);
+      setOpenTypeDropdown(null);
+    }
+  };
+
+  document.addEventListener("click", handleClickOutside); // ✅ đổi ở đây
+  return () => document.removeEventListener("click", handleClickOutside);
+}, []);
 
   // --- LOGIC FORM THÊM/SỬA ---
   const resetForm = () => {
@@ -112,6 +123,8 @@ export const ProductManagement = () => {
         price_kg: Number(form.price_kg) || 0,
         price_bag_25kg: Number(form.price_25kg) || 0,
         price_bag_50kg: Number(form.price_50kg) || 0,
+        type: form.type || "normal",
+        discount_percent: Number(form.discount_percent) || 0,
       };
 
       if (!editing) {
@@ -165,7 +178,16 @@ export const ProductManagement = () => {
       toast.error(error.message || "Lỗi xóa sản phẩm");
     }
   };
-
+  //-------SET SP----------
+const handleSetType = async (id, type) => {
+  try {
+    await apiClient.put(`/products/${id}`, { type });
+    toast.success("Đã cập nhật loại sản phẩm");
+    loadData();
+  } catch (err) {
+    toast.error("Lỗi cập nhật loại");
+  }
+};
   // --- LOGIC NHẬP KHO ---
   const selectProductForImport = (p) => {
     setImportForm({...importForm, product_id: p._id});
@@ -373,6 +395,7 @@ export const ProductManagement = () => {
                           </span>
                         </div>
                       </td>
+
                       <td className="p-4 text-center">
                         <span className="font-black text-[#047857] text-sm italic">{(p.price_kg || 0).toLocaleString()}đ</span>
                       </td>
@@ -402,6 +425,91 @@ export const ProductManagement = () => {
                       </td>
                       <td className="p-4 text-right">
                         <div className="flex justify-end gap-2">
+                          {/* NÚT PHÂN LOẠI */}
+<div ref={typeDropdownRef} className="relative text-[10px] font-bold mt-1">
+  
+  {/* BUTTON */}
+<button
+  onClick={() =>
+    setOpenTypeDropdown(openTypeDropdown === p._id ? null : p._id)
+  }
+  className={`px-3 py-1 rounded-lg text-xs font-bold border shadow-sm transition-all min-w-[120px] text-center
+  ${
+    p.type === "hot"
+      ? "bg-red-50 text-red-600 border-red-200 hover:bg-red-600 hover:text-white"
+      : p.type === "new"
+      ? "bg-blue-50 text-blue-600 border-blue-200 hover:bg-blue-600 hover:text-white"
+      : p.type === "discount"
+      ? "bg-green-50 text-green-600 border-green-200 hover:bg-green-600 hover:text-white"
+      : "bg-gray-50 text-gray-600 border-gray-200 hover:bg-gray-600 hover:text-white"
+  }`}
+>
+  {p.type === "hot" && "SP Bán chạy"}
+  {p.type === "new" && "SP Mới"}
+  {p.type === "discount" && "SP Giảm giá"}
+  {(!p.type || p.type === "normal") && "Bình thường"}
+</button>
+
+  {/* DROPDOWN */}
+  {openTypeDropdown === p._id && (
+    <div className="absolute left-1/2 -translate-x-1/2 mt-2 min-w-[130px]
+    bg-white border border-gray-200 rounded-xl shadow-lg z-50 overflow-hidden animate-fadeIn">
+
+      {/* NORMAL */}
+      <div
+        onClick={() => {
+          handleSetType(p._id, "normal");
+          setOpenTypeDropdown(null);
+        }}
+        className={`px-2 py-1.5 text-xs flex justify-between items-center cursor-pointer transition
+        ${p.type === "normal" ? "bg-gray-100 font-bold" : "hover:bg-gray-100"}`}
+      >
+        <span>Bình thường</span>
+        {p.type === "normal" && "✔"}
+      </div>
+
+      {/* HOT */}
+      <div
+        onClick={() => {
+          handleSetType(p._id, "hot");
+          setOpenTypeDropdown(null);
+        }}
+        className={`px-2 py-1.5 text-xs flex justify-between items-center cursor-pointer transition
+        ${p.type === "hot" ? "bg-red-50 text-red-600 font-bold" : "text-red-600 hover:bg-red-50"}`}
+      >
+        <span>SP Bán chạy</span>
+        {p.type === "hot" && "✔"}
+      </div>
+
+      {/* NEW */}
+      <div
+        onClick={() => {
+          handleSetType(p._id, "new");
+          setOpenTypeDropdown(null);
+        }}
+        className={`px-2 py-1.5 text-xs flex justify-between items-center cursor-pointer transition
+        ${p.type === "new" ? "bg-blue-50 text-blue-600 font-bold" : "text-blue-600 hover:bg-blue-50"}`}
+      >
+        <span>SP Mới</span>
+        {p.type === "new" && "✔"}
+      </div>
+
+      {/* DISCOUNT */}
+      <div
+        onClick={() => {
+          handleSetType(p._id, "discount");
+          setOpenTypeDropdown(null);
+        }}
+        className={`px-2 py-1.5 text-xs flex justify-between items-center cursor-pointer transition
+        ${p.type === "discount" ? "bg-green-50 text-green-600 font-bold" : "text-green-600 hover:bg-green-50"}`}
+      >
+        <span>SP Giảm giá</span>
+        {p.type === "discount" && "✔"}
+      </div>
+
+    </div>
+  )}
+</div>  
                           <button title="Sửa thông tin" onClick={() => handleEdit(p)} className="p-2 bg-emerald-50 rounded-lg text-emerald-600 hover:bg-emerald-600 hover:text-white transition-all shadow-sm border border-emerald-100">
                             <Pencil size={16} />
                           </button>
@@ -467,6 +575,38 @@ export const ProductManagement = () => {
                         {suppliers.map(s => <option key={s._id} value={String(s._id)}>{s.name}</option>)}
                       </select>
                     </div>
+                    <div className="col-span-1 space-y-1">
+                      <label className="text-xs font-bold text-gray-600 uppercase">
+                        Loại sản phẩm
+                      </label>
+                      <select
+                        className="w-full border border-gray-300 p-2.5 rounded-md"
+                        value={form.type || "normal"}
+                        onChange={(e) => setForm({ ...form, type: e.target.value })}
+                      >
+                        <option value="normal">Bình thường</option>
+                        <option value="hot">Bán chạy</option>
+                        <option value="new">Sản phẩm mới</option>
+                        <option value="discount">Giảm giá</option>
+                      </select>
+                    </div>
+                    {form.type === "discount" && (
+                      <div className="col-span-1 space-y-1">
+                        <label className="text-xs font-bold text-rose-600 uppercase">
+                          % Giảm giá
+                        </label>
+                        <input
+                          type="number"
+                          min="0"
+                          max="100"
+                          className="w-full border border-rose-300 p-2.5 rounded-md text-rose-600 font-bold"
+                          value={form.discount_percent || 0}
+                          onChange={(e) =>
+                            setForm({ ...form, discount_percent: e.target.value })
+                          }
+                        />
+                      </div>
+                    )}
                     <div className="col-span-1 md:col-span-4 space-y-1">
                       <label className="text-xs font-bold text-gray-600 uppercase">Tên file ảnh (Local)</label>
                       <input className="w-full border border-gray-300 p-2.5 rounded-md focus:border-[#047857] outline-none text-sm bg-white" value={form.image} onChange={e => setForm({...form, image: e.target.value})} placeholder="VD: sanpham1.jpg" />
