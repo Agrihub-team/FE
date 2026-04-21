@@ -18,6 +18,7 @@ export const AdminLayout = () => {
     if (path.includes("/products")) return "Quản lý sản phẩm";
     if (path.includes("/orders")) return "Quản lý đơn hàng";
     if (path.includes("/users")) return "Quản lý khách hàng";
+    if (path.includes("/reviews")) return "Quản lý đánh giá";
     return "Hệ thống Quản trị";
   };
 
@@ -56,6 +57,7 @@ export const AdminLayout = () => {
             { to: "/admin/products", label: "Sản phẩm", icon: "📦" },
             { to: "/admin/orders", label: "Đơn hàng", icon: "📜" },
             { to: "/admin/users", label: "Khách hàng", icon: "👥" },
+            { to: "/admin/reviews", label: "Đánh giá", icon: "⭐" },
           ].map((item) => {
              const isActive = item.to === "/admin" 
                 ? (location.pathname === "/admin" || location.pathname === "/admin/") 

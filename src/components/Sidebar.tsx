@@ -12,6 +12,7 @@ export const Sidebar = () => {
     { name: '📦 Sản phẩm', href: '/admin/products' },
     { name: '🛒 Đơn hàng', href: '/admin/orders' },
     { name: '👥 Người dùng', href: '/admin/users' },
+    { name: '⭐ Đánh giá', href: '/admin/reviews' },
   ];
 
   return (
