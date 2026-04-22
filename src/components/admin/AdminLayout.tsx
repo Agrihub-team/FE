@@ -39,8 +39,8 @@ export const AdminLayout = () => {
     if (!user) {
       toast.error("Vui lòng đăng nhập!");
       navigate("/login");
-    } else if (user.role !== "ADMIN" && user.role !== "admin") {
-      toast.error("Bạn không có quyền Admin!");
+    } else if (user?.role?.toUpperCase() !== "ADMIN") {
+        toast.error("Bạn không có quyền Admin!");
       navigate("/");
     }
   }, [user, navigate]);
@@ -50,9 +50,8 @@ export const AdminLayout = () => {
     navigate("/login");
   };
 
-  if (!user || (user.role !== "ADMIN" && user.role !== "admin")) return null;
-
-  const menuItems = [
+if (!user || user?.role?.toUpperCase() !== "ADMIN") return null;  
+const menuItems = [
     { to: "/admin", label: "Dashboard", icon: "📊" },
     { to: "/admin/categories", label: "Danh mục", icon: "📂" },
 

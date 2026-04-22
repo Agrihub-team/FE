@@ -14,8 +14,7 @@ export const ReviewManagement = () => {
       setLoading(true);
       const res = await apiClient.get("/reviews");
       
-      // CHỈNH SỬA TẠI ĐÂY: 
-      // Vì API trả về { success: true, data: [...] } nên phải lấy res.data
+      // Giữ nguyên logic check data của bạn
       if (res && res.data) {
         setReviews(res.data);
       } else if (Array.isArray(res)) {
@@ -50,11 +49,11 @@ export const ReviewManagement = () => {
     } catch (error) { toast.error("Lỗi phê duyệt"); }
   };
 
-  // Lọc dữ liệu mượt mà hơn
+  // 👉 SỬA CHỖ NÀY: Cập nhật điều kiện lọc để tìm theo user_id.fullname
   const filtered = Array.isArray(reviews) ? reviews.filter(r => 
     (r.comment?.toLowerCase().includes(search.toLowerCase())) || 
-    (r.user?.fullname?.toLowerCase().includes(search.toLowerCase())) ||
-    (r.product?.name?.toLowerCase().includes(search.toLowerCase()))
+    (r.user_id?.fullname?.toLowerCase().includes(search.toLowerCase())) || // Sửa r.user thành r.user_id
+    (r.product_id?.name?.toLowerCase().includes(search.toLowerCase()))     // Sửa r.product thành r.product_id
   ) : [];
 
   if (loading) return <div className="p-10 text-center font-bold text-emerald-600 italic animate-pulse">ĐANG TẢI ĐÁNH GIÁ...</div>;
@@ -92,11 +91,12 @@ export const ReviewManagement = () => {
             {filtered.length > 0 ? filtered.map((r) => (
               <tr key={r._id} className="hover:bg-gray-50 transition-colors">
                 <td className="p-4 font-bold text-gray-700">
-                   {/* Khớp với model User: fullname */}
-                  {r.user?.fullname || <span className="text-gray-400 font-normal italic text-xs">ID: {r.user?.toString().substring(0,6)}...</span>}
+                   {/* 👉 SỬA CHỖ NÀY: Dùng user_id.fullname để hiện tên thay vì ID */}
+                  {r.user_id?.fullname || <span className="text-gray-400 font-normal italic text-xs">ID: {r.user_id?._id?.substring(0,6) || r.user_id?.substring(0,6)}...</span>}
                 </td>
                 <td className="p-4 text-gray-600">
-                  {r.product?.name || <span className="text-gray-400 italic text-xs">Sản phẩm đã xóa</span>}
+                  {/* 👉 SỬA CHỖ NÀY: Dùng product_id.name */}
+                  {r.product_id?.name || <span className="text-gray-400 italic text-xs">Sản phẩm đã xóa</span>}
                 </td>
                 <td className="p-4">
                   <div className="flex text-amber-400">

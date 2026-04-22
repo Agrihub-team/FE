@@ -33,8 +33,7 @@ export const Sidebar = () => {
 
       <div className="text-center mb-10">
         <h3 className="text-white font-black uppercase tracking-widest text-sm">
-          {user?.name || 'Quản trị viên'}
-        </h3>
+          {user?.fullname || 'Quản trị viên'}        </h3>
         <p className="text-[#A3E635] text-[10px] font-bold uppercase mt-1 opacity-80">
           Agri-Hub Admin v1.0
         </p>
