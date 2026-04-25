@@ -197,29 +197,24 @@ const AdminDashboard = () => {
     const finCats = othersRev > 0 ? [...top5Cats, { name: "Các danh mục còn lại", revenue: othersRev }] : top5Cats;
     const mRev = Math.max(...finCats.map((c: any) => c.revenue), 0);
 
-    // 6. TÍNH CẢNH BÁO TỒN KHO 
-    const lowStockAlerts: any[] = [];
-    
-    allProducts.forEach((p: any) => {
-      // Đọc giới hạn tồn kho (nếu không có thì set mặc định)
-      const minKg = p.min_stock_kg !== undefined ? Number(p.min_stock_kg) : 100;
-      const min25 = p.min_stock_25kg !== undefined ? Number(p.min_stock_25kg) : 5;
-      const min50 = p.min_stock_50kg !== undefined ? Number(p.min_stock_50kg) : 5;
+// 6. TÍNH CẢNH BÁO TỒN KHO (CHỈ BAO 50KG)
+const lowStockAlerts: any[] = [];
 
-      // Kiểm tra từng loại quy cách độc lập
-      if (Number(p.stock_total_kg || 0) <= minKg) {
-        lowStockAlerts.push({ productName: p.name, productId: p._id, type: "Kho lẻ", value: p.stock_total_kg || 0, unit: "kg" });
-      }
-      if (Number(p.stock_25kg || 0) <= min25) {
-        lowStockAlerts.push({ productName: p.name, productId: p._id, type: "Bao 25kg", value: p.stock_25kg || 0, unit: "bao" });
-      }
-      if (Number(p.stock_50kg || 0) <= min50) {
-        lowStockAlerts.push({ productName: p.name, productId: p._id, type: "Bao 50kg", value: p.stock_50kg || 0, unit: "bao" });
-      }
+allProducts.forEach((p: any) => {
+  const stock50 = Number(p.stock_50kg || 0);
+
+  if (stock50 < 50) {
+    lowStockAlerts.push({
+      productName: p.name,
+      productId: p._id,
+      type: "Bao 50kg",
+      value: stock50,
+      unit: "bao"
     });
+  }
+});
 
-    const lowStock = lowStockAlerts.slice(0, 6); // Chỉ hiện 6 dòng cảnh báo đầu tiên
-
+const lowStock = lowStockAlerts.slice(0, 6);
     return {
       periodOrders: pOrders,
       stats: { 
@@ -516,7 +511,11 @@ const AdminDashboard = () => {
             <div className="space-y-3 flex-1">
               {lowStockProducts.length > 0 ? (
                 lowStockProducts.map((p: any, index: number) => (
-                  <div key={index} className="flex flex-col p-3 border border-gray-100 rounded-lg bg-rose-50/30">
+                  <div
+                      key={index}
+                      onClick={() => window.location.href = `/admin/products?highlight=${p.productId}`}
+                      className="cursor-pointer flex flex-col p-3 border border-gray-100 rounded-lg bg-rose-50/30 hover:bg-rose-100 transition"
+                    >
                     <span className="text-xs font-bold text-gray-700 truncate mb-1" title={p.productName}>{p.productName}</span>
                     <div className="flex justify-between items-center mt-1">
                       <span className="text-[10px] text-gray-500 uppercase font-semibold">{p.type}</span>

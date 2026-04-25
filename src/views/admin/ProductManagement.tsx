@@ -3,10 +3,18 @@ import { useEffect, useState, useRef } from "react";
 import { Pencil, Eye, EyeOff, Plus, X, Search, Info, Package, Landmark, CheckCircle2, AlertTriangle, Trash2, PackagePlus } from "lucide-react";
 import { toast } from "sonner";
 import { apiClient } from "../../utils/api";
+import { useSearchParams } from "react-router-dom";
+
 
 const IMAGE_URL = 'http://localhost:3001/images/products';
 
 export const ProductManagement = () => {
+
+  const [searchParams] = useSearchParams();
+  const highlightId = searchParams.get("highlight");
+
+  const highlightRef = useRef(null);
+
   const [products, setProducts] = useState([]);
   const [categories, setCategories] = useState([]);
   const [suppliers, setSuppliers] = useState([]);
@@ -79,6 +87,17 @@ export const ProductManagement = () => {
   useEffect(() => { loadData(); }, []);
 
 useEffect(() => {
+  if (highlightId) {
+    setTimeout(() => {
+      const el = document.getElementById(`product-${highlightId}`);
+      if (el) {
+        el.scrollIntoView({ behavior: "smooth", block: "center" });
+      }
+    }, 300); // delay nhẹ cho DOM render xong
+  }
+}, [highlightId, products]);
+
+useEffect(() => {
   const handleClickOutside = (event) => {
     if (
       dropdownRef.current &&
@@ -97,11 +116,24 @@ useEffect(() => {
 
   // --- LOGIC FORM THÊM/SỬA ---
   const resetForm = () => {
-    setForm({ 
-      name: "", category_id: "", brand_id: "", description: "", image: "", 
-      min_stock_kg: 100, min_stock_25kg: 5, min_stock_50kg: 5,
-      stock_kg: "", price_kg: "", stock_25kg: "", price_25kg: "", stock_50kg: "", price_50kg: ""
-    });
+    setForm({
+    name: "",
+    category_id: "",
+    brand_id: "",
+    description: "",
+    image: "",
+    type: "normal",
+    discount_percent: 0,
+    min_stock_kg: 100,
+    min_stock_25kg: 5,
+    min_stock_50kg: 5,
+    stock_kg: "",
+    price_kg: "",
+    stock_25kg: "",
+    price_25kg: "",
+    stock_50kg: "",
+    price_50kg: ""
+  });
     setEditing(null);
     setShowModal(false);
   };
@@ -207,8 +239,8 @@ const handleSetType = async (id, type) => {
       if (!importForm.product_id) return toast.warning("Vui lòng chọn sản phẩm cần nhập!");
       
       const rowsToImport = [];
-      if (Number(importForm.add_kg) > 0) rowsToImport.push({ type: "kg", quantity: importForm.add_kg });
-      if (Number(importForm.add_25kg) > 0) rowsToImport.push({ type: "bao25kg", quantity: importForm.add_25kg });
+      // if (Number(importForm.add_kg) > 0) rowsToImport.push({ type: "kg", quantity: importForm.add_kg });
+      // if (Number(importForm.add_25kg) > 0) rowsToImport.push({ type: "bao25kg", quantity: importForm.add_25kg });
       if (Number(importForm.add_50kg) > 0) rowsToImport.push({ type: "bao50kg", quantity: importForm.add_50kg });
 
       if (rowsToImport.length === 0) return toast.warning("Vui lòng nhập số lượng vào ít nhất 1 loại quy cách!");
@@ -267,14 +299,8 @@ const handleSetType = async (id, type) => {
     if (statusFilter === "active") statusMatch = p.status === "active";
     else if (statusFilter === "inactive") statusMatch = p.status === "inactive";
     else if (statusFilter === "low_stock") {
-      const minKg = p.min_stock_kg !== undefined ? p.min_stock_kg : 100;
-      const min25 = p.min_stock_25kg !== undefined ? p.min_stock_25kg : 5;
-      const min50 = p.min_stock_50kg !== undefined ? p.min_stock_50kg : 5;
-      
       statusMatch = p.status === "active" && (
-        (p.stock_total_kg || 0) <= minKg || 
-        (p.stock_25kg || 0) <= min25 || 
-        (p.stock_50kg || 0) <= min50
+        (p.stock_50kg || 0) < 50
       );
     }
 
@@ -368,12 +394,20 @@ const handleSetType = async (id, type) => {
                   const min25 = p.min_stock_25kg !== undefined ? p.min_stock_25kg : 5;
                   const min50 = p.min_stock_50kg !== undefined ? p.min_stock_50kg : 5;
 
-                  const isKgLow = (p.stock_total_kg || 0) <= minKg;
-                  const is25Low = (p.stock_25kg || 0) <= min25;
-                  const is50Low = (p.stock_50kg || 0) <= min50;
+                  const isKgLow = false;
+                  const is25Low = false;
+                  const is50Low = (p.stock_50kg || 0) < 50;
 
                   return (
-                    <tr key={p._id} className="hover:bg-emerald-50/30 transition-colors group">
+                    <tr
+                        key={p._id}
+                        id={`product-${p._id}`}
+                        className={`transition-all duration-500 ${
+                          p._id === highlightId
+                            ? "bg-yellow-100 ring-2 ring-yellow-400 animate-pulse"
+                            : "hover:bg-emerald-50/30"
+                        }`}
+                      >
                       <td className="p-4">
                         <div className="flex items-center gap-4">
                           <div className="w-12 h-12 rounded-lg border border-gray-100 bg-white p-1 overflow-hidden shrink-0 shadow-sm">
@@ -633,39 +667,92 @@ const handleSetType = async (id, type) => {
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-gray-200">
-                        <tr className="hover:bg-emerald-50/20 transition-colors">
-                          <td className="p-3 border-r border-gray-200 font-bold text-emerald-700 bg-gray-50/50">⚖️ Bán Ký Lẻ (Kg)</td>
-                          <td className="p-3 border-r border-gray-200"><input type="number" min="0" className="w-full border border-gray-300 p-2 rounded focus:border-[#047857] outline-none text-sm font-bold text-right text-gray-800" placeholder="0" value={form.price_kg} onChange={e => setForm({...form, price_kg: e.target.value})} /></td>
-                          <td className="p-3 border-r border-gray-200 bg-gray-50/30"><input type="number" min="0" disabled={!!editing} className={`w-full border p-2 rounded outline-none text-sm font-bold text-right ${editing ? 'bg-gray-100 text-gray-400 border-gray-200 cursor-not-allowed' : 'bg-white border-gray-300 focus:border-[#047857] text-gray-800'}`} placeholder="0" value={form.stock_kg} onChange={e => setForm({...form, stock_kg: e.target.value})} /></td>
-                          <td className="p-3 bg-rose-50/30">
-                            <div className="flex items-center gap-2">
-                              <input type="number" min="0" className="w-full border border-rose-300 bg-white p-2 rounded focus:border-rose-500 outline-none text-sm font-bold text-rose-700 text-right" placeholder="100" value={form.min_stock_kg} onChange={e => setForm({...form, min_stock_kg: e.target.value})} />
-                              <span className="text-xs font-bold text-rose-400">Kg</span>
-                            </div>
-                          </td>
-                        </tr>
-                        <tr className="hover:bg-blue-50/20 transition-colors">
-                          <td className="p-3 border-r border-gray-200 font-bold text-blue-700 bg-gray-50/50">📦 Nguyên Bao 25 Kg</td>
-                          <td className="p-3 border-r border-gray-200"><input type="number" min="0" className="w-full border border-gray-300 p-2 rounded focus:border-[#047857] outline-none text-sm font-bold text-right text-gray-800" placeholder="0" value={form.price_25kg} onChange={e => setForm({...form, price_25kg: e.target.value})} /></td>
-                          <td className="p-3 border-r border-gray-200 bg-gray-50/30"><input type="number" min="0" disabled={!!editing} className={`w-full border p-2 rounded outline-none text-sm font-bold text-right ${editing ? 'bg-gray-100 text-gray-400 border-gray-200 cursor-not-allowed' : 'bg-white border-gray-300 focus:border-[#047857] text-gray-800'}`} placeholder="0" value={form.stock_25kg} onChange={e => setForm({...form, stock_25kg: e.target.value})} /></td>
-                          <td className="p-3 bg-rose-50/30">
-                            <div className="flex items-center gap-2">
-                              <input type="number" min="0" className="w-full border border-rose-300 bg-white p-2 rounded focus:border-rose-500 outline-none text-sm font-bold text-rose-700 text-right" placeholder="5" value={form.min_stock_25kg} onChange={e => setForm({...form, min_stock_25kg: e.target.value})} />
-                              <span className="text-xs font-bold text-rose-400">Bao</span>
-                            </div>
-                          </td>
-                        </tr>
-                        <tr className="hover:bg-amber-50/20 transition-colors">
-                          <td className="p-3 border-r border-gray-200 font-bold text-amber-700 bg-gray-50/50">📦 Nguyên Bao 50 Kg</td>
-                          <td className="p-3 border-r border-gray-200"><input type="number" min="0" className="w-full border border-gray-300 p-2 rounded focus:border-[#047857] outline-none text-sm font-bold text-right text-gray-800" placeholder="0" value={form.price_50kg} onChange={e => setForm({...form, price_50kg: e.target.value})} /></td>
-                          <td className="p-3 border-r border-gray-200 bg-gray-50/30"><input type="number" min="0" disabled={!!editing} className={`w-full border p-2 rounded outline-none text-sm font-bold text-right ${editing ? 'bg-gray-100 text-gray-400 border-gray-200 cursor-not-allowed' : 'bg-white border-gray-300 focus:border-[#047857] text-gray-800'}`} placeholder="0" value={form.stock_50kg} onChange={e => setForm({...form, stock_50kg: e.target.value})} /></td>
-                          <td className="p-3 bg-rose-50/30">
-                            <div className="flex items-center gap-2">
-                              <input type="number" min="0" className="w-full border border-rose-300 bg-white p-2 rounded focus:border-rose-500 outline-none text-sm font-bold text-rose-700 text-right" placeholder="5" value={form.min_stock_50kg} onChange={e => setForm({...form, min_stock_50kg: e.target.value})} />
-                              <span className="text-xs font-bold text-rose-400">Bao</span>
-                            </div>
-                          </td>
-                        </tr>
+<tr>
+  <td className="p-3 border-r font-bold text-emerald-700 bg-gray-50">
+    ⚖️ Bán Ký Lẻ (Kg)
+  </td>
+
+  {/* GIÁ */}
+  <td className="p-3 border-r">
+    <input
+      type="number"
+      className="w-full border p-2 rounded text-right font-bold"
+      value={form.price_kg}
+      onChange={e => setForm({...form, price_kg: e.target.value})}
+    />
+  </td>
+
+  {/* ẨN tồn kho */}
+  <td className="p-3 border-r text-center text-gray-300 italic">
+    —
+  </td>
+
+  {/* ẨN cảnh báo */}
+  <td className="p-3 text-center text-gray-300 italic">
+    —
+  </td>
+</tr>
+<tr>
+  <td className="p-3 border-r font-bold text-blue-700 bg-gray-50">
+    📦 Nguyên Bao 25 Kg
+  </td>
+
+  <td className="p-3 border-r">
+    <input
+      type="number"
+      className="w-full border p-2 rounded text-right font-bold"
+      value={form.price_25kg}
+      onChange={e => setForm({...form, price_25kg: e.target.value})}
+    />
+  </td>
+
+  <td className="p-3 border-r text-center text-gray-300 italic">
+    —
+  </td>
+
+  <td className="p-3 text-center text-gray-300 italic">
+    —
+  </td>
+</tr>
+<tr>
+  <td className="p-3 border-r font-bold text-amber-700 bg-gray-50">
+    📦 Nguyên Bao 50 Kg
+  </td>
+
+  {/* GIÁ */}
+  <td className="p-3 border-r">
+    <input
+      type="number"
+      className="w-full border p-2 rounded text-right font-bold"
+      value={form.price_50kg}
+      onChange={e => setForm({...form, price_50kg: e.target.value})}
+    />
+  </td>
+
+  {/* TỒN KHO */}
+  <td className="p-3 border-r">
+    <input
+      type="number"
+      disabled={!!editing}
+      className="w-full border p-2 rounded text-right"
+      value={form.stock_50kg}
+      onChange={e => setForm({...form, stock_50kg: e.target.value})}
+    />
+  </td>
+
+  {/* CẢNH BÁO */}
+  <td className="p-3">
+    <div className="flex items-center gap-2">
+      <input
+        type="number"
+        className="w-full border border-rose-300 p-2 rounded text-right"
+        value={form.min_stock_50kg}
+        onChange={e => setForm({...form, min_stock_50kg: e.target.value})}
+      />
+      <span className="text-xs text-rose-400">Bao</span>
+    </div>
+  </td>
+</tr>
                       </tbody>
                     </table>
                   </div>
@@ -775,7 +862,7 @@ const handleSetType = async (id, type) => {
                       <tbody className="divide-y divide-gray-200">
                         
                         {/* Nhập Ký lẻ */}
-                        <tr className="hover:bg-blue-50/20 transition-colors">
+                        {/* <tr className="hover:bg-blue-50/20 transition-colors">
                           <td className="p-3 border-r border-gray-200 font-bold text-emerald-700 bg-gray-50/50">⚖️ Bán Ký Lẻ (Kg)</td>
                           <td className="p-3 border-r border-gray-200 text-center font-bold text-gray-500 bg-gray-50/30">
                             {selectedImportProductDetails?.stock_total_kg || 0}
@@ -784,10 +871,10 @@ const handleSetType = async (id, type) => {
                             <input type="number" min="0" className="w-full border border-blue-300 bg-white p-2 rounded focus:border-blue-600 focus:ring-1 focus:ring-blue-600 outline-none text-sm font-black text-blue-700 text-right placeholder-blue-200" placeholder="0" value={importForm.add_kg} onChange={e => setImportForm({...importForm, add_kg: e.target.value})} />
                           </td>
                           <td className="p-3 text-center text-xs font-bold text-gray-400">Kg</td>
-                        </tr>
+                        </tr> */}
 
                         {/* Nhập 25kg */}
-                        <tr className="hover:bg-blue-50/20 transition-colors">
+                        {/* <tr className="hover:bg-blue-50/20 transition-colors">
                           <td className="p-3 border-r border-gray-200 font-bold text-blue-700 bg-gray-50/50">📦 Nguyên Bao 25 Kg</td>
                           <td className="p-3 border-r border-gray-200 text-center font-bold text-gray-500 bg-gray-50/30">
                             {selectedImportProductDetails?.stock_25kg || 0}
@@ -796,7 +883,7 @@ const handleSetType = async (id, type) => {
                             <input type="number" min="0" className="w-full border border-blue-300 bg-white p-2 rounded focus:border-blue-600 focus:ring-1 focus:ring-blue-600 outline-none text-sm font-black text-blue-700 text-right placeholder-blue-200" placeholder="0" value={importForm.add_25kg} onChange={e => setImportForm({...importForm, add_25kg: e.target.value})} />
                           </td>
                           <td className="p-3 text-center text-xs font-bold text-gray-400">Bao</td>
-                        </tr>
+                        </tr> */}
 
                         {/* Nhập 50kg */}
                         <tr className="hover:bg-blue-50/20 transition-colors">
