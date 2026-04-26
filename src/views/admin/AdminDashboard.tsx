@@ -202,16 +202,30 @@ const lowStockAlerts: any[] = [];
 
 allProducts.forEach((p: any) => {
   const stock50 = Number(p.stock_50kg || 0);
+  const stock25 = Number(p.stock_25kg || 0);
 
-  if (stock50 < 50) {
-    lowStockAlerts.push({
-      productName: p.name,
-      productId: p._id,
-      type: "Bao 50kg",
-      value: stock50,
-      unit: "bao"
-    });
-  }
+  const min50 = Number(p.min_stock_50kg ?? 5);
+  const min25 = Number(p.min_stock_25kg ?? 5);
+
+if ((p.stock_50kg || 0) <= min50) {
+  lowStockAlerts.push({
+    productName: p.name,
+    productId: p._id,
+    type: "Bao 50kg",
+    value: p.stock_50kg || 0,
+    unit: "bao"
+  });
+}
+
+if ((p.stock_25kg || 0) <= min25) {
+  lowStockAlerts.push({
+    productName: p.name,
+    productId: p._id,
+    type: "Bao 25kg",
+    value: p.stock_25kg || 0,
+    unit: "bao"
+  });
+}
 });
 
 const lowStock = lowStockAlerts.slice(0, 6);
