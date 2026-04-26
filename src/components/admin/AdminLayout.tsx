@@ -67,6 +67,7 @@ const menuItems = [
     { to: "/admin/orders", label: "Đơn hàng", icon: "📜" },
     { to: "/admin/users", label: "Khách hàng", icon: "👥" },
     { to: "/admin/reviews", label: "Đánh giá", icon: "⭐" },
+    { to: "/admin/vouchers", label: "Quản lý Voucher", icon: "🎫" },
   ];
 
   return (

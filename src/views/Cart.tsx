@@ -159,7 +159,7 @@ export const Cart = () => {
                 })}
               </div>
 
-              {/* BÊN PHẢI: SIDEBAR XÁC NHẬN (GIỮ GIAO DIỆN ĐẸP) */}
+              {/* BÊN PHẢI: SIDEBAR XÁC NHẬN */}
               <div className="lg:w-[32%] w-full sticky top-6">
                 <div className="bg-white border border-gray-200 rounded-[2rem] p-8 shadow-sm border-b-[8px] border-[#047857]">
                   <h3 className="text-[14px] font-black text-gray-900 uppercase mb-6 tracking-widest border-b border-gray-100 pb-3 italic text-center">XÁC NHẬN ĐƠN HÀNG</h3>
@@ -171,7 +171,10 @@ export const Cart = () => {
                       <span className="text-[11px] font-black text-gray-700 uppercase tracking-widest">Mã giảm giá đơn hàng:</span>
                     </div>
                     <div className="space-y-2 max-h-[220px] overflow-y-auto pr-1 custom-scrollbar">
-                      {vouchers.length > 0 ? vouchers.map((v) => {
+                      {/* SỬA TẠI ĐÂY: Thêm .filter(v => v.applicableProducts?.length === 0) */}
+                      {vouchers.length > 0 ? vouchers
+                        .filter(v => !v.applicableProducts || v.applicableProducts.length === 0) 
+                        .map((v) => {
                         const isActive = selectedVoucher?._id === v._id;
                         const canUse = rawTotal >= v.minAmount;
                         return (

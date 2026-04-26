@@ -40,7 +40,6 @@ export const ProductManagement = () => {
   const typeDropdownRef = useRef(null);
   const [openTypeDropdown, setOpenTypeDropdown] = useState(null);
 
-
   // State Form Thêm/Sửa
   const [form, setForm] = useState({
     name: "",
@@ -70,7 +69,7 @@ export const ProductManagement = () => {
     try {
       setLoading(true);
       const [prodRes, catRes, supRes] = await Promise.all([
-        apiClient.get("/products?status=all"),
+        apiClient.get("/products"),
         apiClient.get("/categories"),
         apiClient.get("/suppliers")
       ]);
@@ -263,7 +262,7 @@ const handleSetType = async (id, type) => {
 
   const handleToggleStatus = async (id) => {
     try {
-      await apiClient.put(`/products/${id}/toggle`);
+      await apiClient.put(`/products/${id}/toggle-status`);
       toast.success("Đã thay đổi trạng thái");
       loadData();
     } catch (error) { toast.error("Lỗi thao tác"); }
@@ -300,16 +299,9 @@ const handleSetType = async (id, type) => {
     if (statusFilter === "active") statusMatch = p.status === "active";
     else if (statusFilter === "inactive") statusMatch = p.status === "inactive";
     else if (statusFilter === "low_stock") {
-      const minKg = p.min_stock_kg ?? 100;
-      const min25 = p.min_stock_25kg ?? 5;
-      const min50 = p.min_stock_50kg ?? 5;
-
-      const isLow =
-        (p.stock_total_kg || 0) <= minKg ||
-        (p.stock_25kg || 0) <= min25 ||
-        (p.stock_50kg || 0) <= min50;
-
-      statusMatch = p.status === "active" && isLow;
+      statusMatch = p.status === "active" && (
+        (p.stock_50kg || 0) < 50
+      );
     }
 
     return nameMatch && categoryMatch && supplierMatch && statusMatch;
@@ -403,8 +395,8 @@ const handleSetType = async (id, type) => {
                   const min50 = p.min_stock_50kg !== undefined ? p.min_stock_50kg : 5;
 
                   const isKgLow = false;
-                  const is25Low = (p.stock_25kg || 0) <= min25;
-                  const is50Low = (p.stock_50kg || 0) <= min50;
+                  const is25Low = false;
+                  const is50Low = (p.stock_50kg || 0) < 50;
 
                   return (
                     <tr
@@ -690,25 +682,15 @@ const handleSetType = async (id, type) => {
     />
   </td>
 
-{/* TỒN KHO */}
-<td className="p-3 border-r">
-  <input
-    type="number"
-    className="w-full border p-2 rounded text-right"
-    value={form.stock_kg}
-    onChange={e => setForm({...form, stock_kg: e.target.value})}
-  />
-</td>
+  {/* ẨN tồn kho */}
+  <td className="p-3 border-r text-center text-gray-300 italic">
+    —
+  </td>
 
-{/* CẢNH BÁO */}
-<td className="p-3">
-  <input
-    type="number"
-    className="w-full border border-rose-300 p-2 rounded text-right"
-    value={form.min_stock_kg}
-    onChange={e => setForm({...form, min_stock_kg: e.target.value})}
-  />
-</td>
+  {/* ẨN cảnh báo */}
+  <td className="p-3 text-center text-gray-300 italic">
+    —
+  </td>
 </tr>
 <tr>
   <td className="p-3 border-r font-bold text-blue-700 bg-gray-50">
@@ -724,28 +706,13 @@ const handleSetType = async (id, type) => {
     />
   </td>
 
-{/* TỒN KHO */}
-<td className="p-3 border-r">
-  <input
-    type="number"
-    className="w-full border p-2 rounded text-right"
-    value={form.stock_25kg}
-    onChange={e => setForm({...form, stock_25kg: e.target.value})}
-  />
-</td>
+  <td className="p-3 border-r text-center text-gray-300 italic">
+    —
+  </td>
 
-{/* CẢNH BÁO */}
-<td className="p-3">
-  <div className="flex items-center gap-2">
-    <input
-      type="number"
-      className="w-full border border-rose-300 p-2 rounded text-right"
-      value={form.min_stock_25kg}
-      onChange={e => setForm({...form, min_stock_25kg: e.target.value})}
-    />
-    <span className="text-xs text-rose-400">Bao</span>
-  </div>
-</td>
+  <td className="p-3 text-center text-gray-300 italic">
+    —
+  </td>
 </tr>
 <tr>
   <td className="p-3 border-r font-bold text-amber-700 bg-gray-50">
