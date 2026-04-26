@@ -240,7 +240,7 @@ const handleSetType = async (id, type) => {
       
       const rowsToImport = [];
       // if (Number(importForm.add_kg) > 0) rowsToImport.push({ type: "kg", quantity: importForm.add_kg });
-      // if (Number(importForm.add_25kg) > 0) rowsToImport.push({ type: "bao25kg", quantity: importForm.add_25kg });
+      if (Number(importForm.add_25kg) > 0) rowsToImport.push({ type: "bao25kg", quantity: importForm.add_25kg });
       if (Number(importForm.add_50kg) > 0) rowsToImport.push({ type: "bao50kg", quantity: importForm.add_50kg });
 
       if (rowsToImport.length === 0) return toast.warning("Vui lòng nhập số lượng vào ít nhất 1 loại quy cách!");
@@ -874,7 +874,7 @@ const handleSetType = async (id, type) => {
                         </tr> */}
 
                         {/* Nhập 25kg */}
-                        {/* <tr className="hover:bg-blue-50/20 transition-colors">
+                        <tr className="hover:bg-blue-50/20 transition-colors">
                           <td className="p-3 border-r border-gray-200 font-bold text-blue-700 bg-gray-50/50">📦 Nguyên Bao 25 Kg</td>
                           <td className="p-3 border-r border-gray-200 text-center font-bold text-gray-500 bg-gray-50/30">
                             {selectedImportProductDetails?.stock_25kg || 0}
@@ -883,7 +883,7 @@ const handleSetType = async (id, type) => {
                             <input type="number" min="0" className="w-full border border-blue-300 bg-white p-2 rounded focus:border-blue-600 focus:ring-1 focus:ring-blue-600 outline-none text-sm font-black text-blue-700 text-right placeholder-blue-200" placeholder="0" value={importForm.add_25kg} onChange={e => setImportForm({...importForm, add_25kg: e.target.value})} />
                           </td>
                           <td className="p-3 text-center text-xs font-bold text-gray-400">Bao</td>
-                        </tr> */}
+                        </tr>
 
                         {/* Nhập 50kg */}
                         <tr className="hover:bg-blue-50/20 transition-colors">
