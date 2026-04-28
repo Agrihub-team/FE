@@ -20,8 +20,8 @@ import { ProductManagement } from "./views/admin/ProductManagement";
 import ProductDiscount from "./views/admin/ProductDiscount";
 import { OrderManagement } from "./views/admin/OrderManagement";
 import { UserManagement } from "./views/admin/UserManagement";
-import { ReviewManagement } from "./views/admin/ReviewManagement"; // Nhớ check đúng đường dẫn file của bạn nhé
-
+import { ReviewManagement } from "./views/admin/ReviewManagement"; // Nhớ check đúng đường 
+import { VoucherManagement } from "./views/admin/VoucherManagement";
 export const AppRouter = () => (
   <Router future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
     <Routes>
@@ -50,6 +50,7 @@ export const AppRouter = () => (
         <Route path="orders" element={<OrderManagement />} />
         <Route path="users" element={<UserManagement />} />
         <Route path="reviews" element={<ReviewManagement />} />
+        <Route path="vouchers" element={<VoucherManagement />} />
       </Route>
 
       {/* Redirect nếu vào sai link admin */}

@@ -40,6 +40,7 @@ export const ProductManagement = () => {
   const typeDropdownRef = useRef(null);
   const [openTypeDropdown, setOpenTypeDropdown] = useState(null);
 
+
   // State Form Thêm/Sửa
   const [form, setForm] = useState({
     name: "",
@@ -69,7 +70,7 @@ export const ProductManagement = () => {
     try {
       setLoading(true);
       const [prodRes, catRes, supRes] = await Promise.all([
-        apiClient.get("/products"),
+        apiClient.get("/products?status=all"),
         apiClient.get("/categories"),
         apiClient.get("/suppliers")
       ]);
@@ -240,7 +241,7 @@ const handleSetType = async (id, type) => {
       
       const rowsToImport = [];
       // if (Number(importForm.add_kg) > 0) rowsToImport.push({ type: "kg", quantity: importForm.add_kg });
-      // if (Number(importForm.add_25kg) > 0) rowsToImport.push({ type: "bao25kg", quantity: importForm.add_25kg });
+      if (Number(importForm.add_25kg) > 0) rowsToImport.push({ type: "bao25kg", quantity: importForm.add_25kg });
       if (Number(importForm.add_50kg) > 0) rowsToImport.push({ type: "bao50kg", quantity: importForm.add_50kg });
 
       if (rowsToImport.length === 0) return toast.warning("Vui lòng nhập số lượng vào ít nhất 1 loại quy cách!");
@@ -262,7 +263,7 @@ const handleSetType = async (id, type) => {
 
   const handleToggleStatus = async (id) => {
     try {
-      await apiClient.put(`/products/${id}/toggle-status`);
+      await apiClient.put(`/products/${id}/toggle`);
       toast.success("Đã thay đổi trạng thái");
       loadData();
     } catch (error) { toast.error("Lỗi thao tác"); }
@@ -299,9 +300,16 @@ const handleSetType = async (id, type) => {
     if (statusFilter === "active") statusMatch = p.status === "active";
     else if (statusFilter === "inactive") statusMatch = p.status === "inactive";
     else if (statusFilter === "low_stock") {
-      statusMatch = p.status === "active" && (
-        (p.stock_50kg || 0) < 50
-      );
+      const minKg = p.min_stock_kg ?? 100;
+      const min25 = p.min_stock_25kg ?? 5;
+      const min50 = p.min_stock_50kg ?? 5;
+
+      const isLow =
+        (p.stock_total_kg || 0) <= minKg ||
+        (p.stock_25kg || 0) <= min25 ||
+        (p.stock_50kg || 0) <= min50;
+
+      statusMatch = p.status === "active" && isLow;
     }
 
     return nameMatch && categoryMatch && supplierMatch && statusMatch;
@@ -395,8 +403,8 @@ const handleSetType = async (id, type) => {
                   const min50 = p.min_stock_50kg !== undefined ? p.min_stock_50kg : 5;
 
                   const isKgLow = false;
-                  const is25Low = false;
-                  const is50Low = (p.stock_50kg || 0) < 50;
+                  const is25Low = (p.stock_25kg || 0) <= min25;
+                  const is50Low = (p.stock_50kg || 0) <= min50;
 
                   return (
                     <tr
@@ -682,15 +690,25 @@ const handleSetType = async (id, type) => {
     />
   </td>
 
-  {/* ẨN tồn kho */}
-  <td className="p-3 border-r text-center text-gray-300 italic">
-    —
-  </td>
+{/* TỒN KHO */}
+<td className="p-3 border-r">
+  <input
+    type="number"
+    className="w-full border p-2 rounded text-right"
+    value={form.stock_kg}
+    onChange={e => setForm({...form, stock_kg: e.target.value})}
+  />
+</td>
 
-  {/* ẨN cảnh báo */}
-  <td className="p-3 text-center text-gray-300 italic">
-    —
-  </td>
+{/* CẢNH BÁO */}
+<td className="p-3">
+  <input
+    type="number"
+    className="w-full border border-rose-300 p-2 rounded text-right"
+    value={form.min_stock_kg}
+    onChange={e => setForm({...form, min_stock_kg: e.target.value})}
+  />
+</td>
 </tr>
 <tr>
   <td className="p-3 border-r font-bold text-blue-700 bg-gray-50">
@@ -706,13 +724,28 @@ const handleSetType = async (id, type) => {
     />
   </td>
 
-  <td className="p-3 border-r text-center text-gray-300 italic">
-    —
-  </td>
+{/* TỒN KHO */}
+<td className="p-3 border-r">
+  <input
+    type="number"
+    className="w-full border p-2 rounded text-right"
+    value={form.stock_25kg}
+    onChange={e => setForm({...form, stock_25kg: e.target.value})}
+  />
+</td>
 
-  <td className="p-3 text-center text-gray-300 italic">
-    —
-  </td>
+{/* CẢNH BÁO */}
+<td className="p-3">
+  <div className="flex items-center gap-2">
+    <input
+      type="number"
+      className="w-full border border-rose-300 p-2 rounded text-right"
+      value={form.min_stock_25kg}
+      onChange={e => setForm({...form, min_stock_25kg: e.target.value})}
+    />
+    <span className="text-xs text-rose-400">Bao</span>
+  </div>
+</td>
 </tr>
 <tr>
   <td className="p-3 border-r font-bold text-amber-700 bg-gray-50">
@@ -874,7 +907,7 @@ const handleSetType = async (id, type) => {
                         </tr> */}
 
                         {/* Nhập 25kg */}
-                        {/* <tr className="hover:bg-blue-50/20 transition-colors">
+                        <tr className="hover:bg-blue-50/20 transition-colors">
                           <td className="p-3 border-r border-gray-200 font-bold text-blue-700 bg-gray-50/50">📦 Nguyên Bao 25 Kg</td>
                           <td className="p-3 border-r border-gray-200 text-center font-bold text-gray-500 bg-gray-50/30">
                             {selectedImportProductDetails?.stock_25kg || 0}
@@ -883,7 +916,7 @@ const handleSetType = async (id, type) => {
                             <input type="number" min="0" className="w-full border border-blue-300 bg-white p-2 rounded focus:border-blue-600 focus:ring-1 focus:ring-blue-600 outline-none text-sm font-black text-blue-700 text-right placeholder-blue-200" placeholder="0" value={importForm.add_25kg} onChange={e => setImportForm({...importForm, add_25kg: e.target.value})} />
                           </td>
                           <td className="p-3 text-center text-xs font-bold text-gray-400">Bao</td>
-                        </tr> */}
+                        </tr>
 
                         {/* Nhập 50kg */}
                         <tr className="hover:bg-blue-50/20 transition-colors">
