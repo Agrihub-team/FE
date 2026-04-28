@@ -10,6 +10,7 @@ import { Register } from './views/Register';
 import { Profile } from './views/Profile';
 import { OrderSuccess } from './views/OrderSuccess';
 import { PaymentError } from './views/PaymentError';
+import { ChangePassword } from './views/ChangePassword';
 
 // Admin Views
 import { AdminLayout } from "./components/admin/AdminLayout";
@@ -36,6 +37,8 @@ export const AppRouter = () => (
       <Route path="/order-success/:id" element={<OrderSuccess />} />
       <Route path="/order-success" element={<OrderSuccess />} />
       <Route path="/payment-error" element={<PaymentError />} />
+      <Route path='/change-password' element={<ChangePassword/>}/>
+
      
       {/*  ADMIN ROUTES (Cấu trúc lồng nhau - Fix lỗi link lạ) */}
       <Route path="/admin" element={<AdminLayout />}>
