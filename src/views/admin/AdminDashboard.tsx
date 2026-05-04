@@ -228,7 +228,7 @@ if ((p.stock_25kg || 0) <= min25) {
 }
 });
 
-const lowStock = lowStockAlerts.slice(0, 6);
+const lowStock = lowStockAlerts;
     return {
       periodOrders: pOrders,
       stats: { 
@@ -522,12 +522,12 @@ const lowStock = lowStockAlerts.slice(0, 6);
 
           <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm border-t-4 border-t-rose-600 flex flex-col">
             <h3 className="text-sm font-bold text-gray-800 uppercase mb-4 border-l-4 border-rose-600 pl-3">Sắp hết hàng</h3>
-            <div className="space-y-3 flex-1">
+            <div className="space-y-3 flex-1 max-h-[320px] overflow-y-auto pr-1 scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-transparent">
               {lowStockProducts.length > 0 ? (
                 lowStockProducts.map((p: any, index: number) => (
                   <div
                       key={index}
-                      onClick={() => window.location.href = `/admin/products?highlight=${p.productId}`}
+                      onClick={() => window.location.href = `/admin/products?highlight=${p.productId}&import=${p.productId}`}
                       className="cursor-pointer flex flex-col p-3 border border-gray-100 rounded-lg bg-rose-50/30 hover:bg-rose-100 transition"
                     >
                     <span className="text-xs font-bold text-gray-700 truncate mb-1" title={p.productName}>{p.productName}</span>
