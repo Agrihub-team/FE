@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { User } from '../models/user';
+import { useCartStore } from './cartStore';
 
 interface AuthState {
   user: User | null;
@@ -17,13 +18,17 @@ export const useAuthStore = create<AuthState>((set) => ({
   },
 
   logout: () => {
+    // 1. Sync cart lên server TRƯỚC khi xóa token (token đọc ngay lúc gọi hàm)
+    useCartStore.getState().syncNow();
+
+    // 2. Xóa auth local
     localStorage.removeItem('token');
     localStorage.removeItem('user');
-    localStorage.removeItem('agrihub-cart'); // xóa cart persist ngay lập tức
+
+    // 3. Xóa cart local (giữ server nguyên để login lại còn hàng)
+    localStorage.removeItem('agrihub-cart');
+    useCartStore.setState({ items: [], appliedVoucher: null });
+
     set({ user: null });
-    // Reset Zustand cart state (không await để không chặn logout)
-    import('./cartStore').then(({ useCartStore }) => {
-      useCartStore.getState().clearCart();
-    });
   }
 }));

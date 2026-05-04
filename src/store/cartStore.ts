@@ -55,6 +55,7 @@ interface CartStore {
   getFinalTotal: () => number;
   clearCart: () => void;
   clearSelectedItems: () => Promise<void>;
+  syncNow: () => void;
   toggleSelect: (id: string) => Promise<void>;
   applyVoucherToItem: (id: string, voucher: Voucher) => Promise<void>;
   getSelectedTotal: () => number;
@@ -212,6 +213,15 @@ export const useCartStore = create<CartStore>()(
       }
     } catch (error) {
       console.error(error.message);
+    }
+  },
+
+  // Flush debounce ngay lập tức — gọi trước khi logout để đảm bảo server có items
+  syncNow: () => {
+    if (syncTimer) { clearTimeout(syncTimer); syncTimer = null; }
+    const token = localStorage.getItem("token");
+    if (token && get().items.length > 0) {
+      apiClient.post("/cart/sync", { items: get().items }).catch(() => {});
     }
   },
 
