@@ -183,18 +183,21 @@ const FlashSaleCard = ({ product, onAdd }: any) => {
 };
 
 // ── PROMO CARD ────────────────────────────────────────────────────────────────
-const PromoCard = ({ color, title, desc, to = "/products" }: any) => (
+const PromoCard = ({ color, image, title, desc, to = "/products" }: any) => (
   <Link
     to={to}
-    className={`${color} rounded-2xl p-6 min-h-[150px] border border-white/40 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all flex flex-col justify-between group`}
+    className={`${image ? "" : color} rounded-2xl min-h-[150px] border border-white/40 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all flex flex-col justify-between group overflow-hidden relative`}
+    style={image ? { backgroundImage: `url('${image}')`, backgroundSize: "cover", backgroundPosition: "center right" } : {}}
   >
-    <div>
-      <h3 className="text-[15px] font-black text-gray-800 mb-1 uppercase">{title}</h3>
-      <p className="text-gray-600 text-xs italic">{desc}</p>
+    <div className="p-6 flex flex-col justify-between h-full z-10 relative">
+      <div>
+        <h3 className="text-[15px] font-black text-gray-800 mb-1 uppercase">{title}</h3>
+        <p className="text-gray-600 text-xs italic">{desc}</p>
+      </div>
+      <span className="mt-4 inline-flex items-center gap-1 bg-[#047857] group-hover:bg-[#fbc02d] text-white group-hover:text-gray-900 px-4 py-1.5 rounded-full text-[11px] font-bold uppercase transition-colors w-fit">
+        Xem ngay <ChevronRight size={12} />
+      </span>
     </div>
-    <span className="mt-4 inline-flex items-center gap-1 bg-[#047857] group-hover:bg-[#fbc02d] text-white group-hover:text-gray-900 px-4 py-1.5 rounded-full text-[11px] font-bold uppercase transition-colors w-fit">
-      Xem ngay <ChevronRight size={12} />
-    </span>
   </Link>
 );
 
@@ -368,9 +371,9 @@ export const Home = () => {
         {/* PROMO BANNERS */}
         <section className="max-w-[1200px] mx-auto px-4 mt-8">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <PromoCard color="bg-[#f3deaa]" title="Thức ăn chăn nuôi" desc="Tăng trọng nhanh, nở đùi nở vai" />
-            <PromoCard color="bg-[#bce0f4]" title="Thuốc thú y" desc="Đặc trị bệnh, hiệu quả cao" />
-            <PromoCard color="bg-[#c8e6c9]" title="Gạo & Nông sản" desc="Gạo thơm sạch, giá sỉ" />
+            <PromoCard image="/promo-heo.jpg" title="Thức ăn chăn nuôi" desc="Tăng trọng nhanh, nở đùi nở vai" />
+            <PromoCard image="/promo-thuoc.jpg" title="Thuốc thú y" desc="Đặc trị bệnh, hiệu quả cao" />
+            <PromoCard image="/promo-gao.jpg" title="Gạo & Nông sản" desc="Gạo thơm sạch, giá sỉ" />
           </div>
         </section>
 
