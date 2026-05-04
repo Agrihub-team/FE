@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useLocation } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -40,6 +40,7 @@ type ResetPasswordInputs = z.infer<typeof resetPasswordSchema>;
 
 export const Login = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const loginAction = useAuthStore((state) => state.login);
 
   const [showPassword, setShowPassword] = useState(false);
@@ -98,7 +99,8 @@ export const Login = () => {
 
     loginAction(userData, tokenData);
     toast.success("Đăng nhập thành công!");
-    navigate(userData.role?.toUpperCase() === "ADMIN" ? "/admin" : "/");
+    const from = (location.state as any)?.from;
+    navigate(from || (userData.role?.toUpperCase() === "ADMIN" ? "/admin" : "/"));
   };
 
   const onLogin = async (data: LoginFormInputs) => {
