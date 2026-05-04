@@ -185,12 +185,12 @@ export const useCartStore = create<CartStore>()(
   },
 
   clearCart: async () => {
+    set({ items: [], appliedVoucher: null });
     try {
       const token = localStorage.getItem("token");
       if (token) {
         await apiClient.post("/cart/sync", { items: [] });
       }
-      set({ items: [], appliedVoucher: null });
     } catch (error) {
       console.error(error.message);
     }

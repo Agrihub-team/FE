@@ -296,7 +296,7 @@ export const Checkout = () => {
         toast.success("Đang chuyển đến trang thanh toán VNPay...");
         window.location.href = result.vnpUrl;
       } else {
-        clearCart();
+        await clearCart();
         toast.success("Đặt hàng thành công!");
         navigate(`/order-success/${result?.order?._id}`);
       }
