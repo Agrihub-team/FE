@@ -115,7 +115,13 @@ export const Checkout = () => {
         const listAddr = Array.isArray(addrRes) ? addrRes : addrRes?.data || [];
         setSavedAddresses(listAddr);
         const allVouchers = Array.isArray(voucherRes) ? voucherRes : voucherRes?.data || [];
-        setVouchers(allVouchers.filter((v: any) => !v.applicableProducts || v.applicableProducts.length === 0));
+        const now = new Date();
+        setVouchers(allVouchers.filter((v: any) =>
+          (!v.applicableProducts || v.applicableProducts.length === 0) &&
+          (v.quantity == null || v.quantity > 0) &&
+          (!v.startDate || new Date(v.startDate) <= now) &&
+          (!v.endDate || new Date(v.endDate) >= now)
+        ));
 
         const defaultAddr =
           listAddr.find((a: any) => a.is_default) || listAddr[0];
