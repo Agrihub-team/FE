@@ -225,7 +225,7 @@ export const Checkout = () => {
 
   const voucherDiscount = selectedVoucher && subTotal >= selectedVoucher.minAmount
     ? (selectedVoucher.type === 'percentage'
-        ? Math.round(subTotal * selectedVoucher.discount / 100)
+        ? Math.round(subTotal * Math.min(100, Number(selectedVoucher.discount)) / 100)
         : Number(selectedVoucher.discount) || 0)
     : 0;
 
@@ -557,7 +557,12 @@ export const Checkout = () => {
                             className={`w-full text-left px-3 py-2 rounded-lg border text-[10px] transition-all flex justify-between items-center ${active ? "bg-yellow-50 border-yellow-400 text-yellow-800 font-bold" : "bg-slate-50 border-slate-200 text-slate-600 hover:border-yellow-400"} ${!canUse ? "opacity-40 cursor-not-allowed" : "cursor-pointer"}`}
                           >
                             <span className="font-bold uppercase">{active && "✓ "}{v.code}</span>
-                            <span>-{Number(v.discount).toLocaleString()}đ · từ {Number(v.minAmount).toLocaleString()}đ</span>
+                            <span>
+                              -{v.type === 'percentage'
+                                ? `${Number(v.discount)}%`
+                                : `${Number(v.discount).toLocaleString()}đ`}
+                              {' · từ '}{Number(v.minAmount).toLocaleString()}đ
+                            </span>
                           </button>
                         );
                       })}
@@ -683,7 +688,14 @@ export const Checkout = () => {
                   )}
                   <div className="flex flex-col gap-0.5">
                     <div className="flex justify-between text-slate-500">
-                      <span className="font-semibold">Phí vận chuyển:</span>
+                      <span className="font-semibold flex items-center gap-1.5">
+                        Phí vận chuyển:
+                        {shippingMethod === "FAST" && (
+                          <span className="inline-flex items-center gap-0.5 bg-orange-100 text-orange-600 text-[9px] font-black px-1.5 py-0.5 rounded-full uppercase">
+                            <Zap size={9} /> Hỏa tốc
+                          </span>
+                        )}
+                      </span>
                       <span className={`font-bold ${shipError ? "text-red-500" : shippingFee === 0 && formData.district ? "text-emerald-600" : "text-slate-800"}`}>
                         {!formData.district
                           ? "Chưa chọn địa chỉ"
