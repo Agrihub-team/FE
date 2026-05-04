@@ -412,20 +412,24 @@ export const Home = () => {
                     ))}
                 </div>
               </div>
-              <div className="lg:w-[25%] bg-gradient-to-b from-[#6a7f45] to-[#3d5a27] rounded-2xl p-6 text-white flex flex-col items-center text-center justify-between">
-                <div>
-                  <h3 className="text-lg font-black uppercase mt-2">Sản phẩm nổi bật</h3>
-                  <p className="text-xs mt-2 text-green-200 italic">Mua sắm thoải mái chỉ từ 200,000đ</p>
+              <div
+                className="lg:w-[25%] rounded-2xl overflow-hidden text-white flex flex-col items-center text-center justify-between relative"
+                style={{ backgroundImage: "url('/promo-featured.jpg')", backgroundSize: "cover", backgroundPosition: "top center" }}
+              >
+                <div className="absolute inset-0 bg-gradient-to-b from-black/55 via-black/20 to-black/65" />
+                <div className="relative z-10 p-6 flex flex-col h-full items-center text-center justify-between w-full">
+                  <div>
+                    <h3 className="text-lg font-black uppercase mt-2 drop-shadow">Sản phẩm nổi bật</h3>
+                    <p className="text-xs mt-2 text-yellow-200 italic">Mua sắm thoải mái chỉ từ 200,000đ</p>
+                  </div>
+                  <div className="flex-1" />
+                  <Link
+                    to="/products"
+                    className="bg-white text-gray-800 px-6 py-2 rounded-full text-xs font-black uppercase hover:bg-[#fbc02d] transition flex items-center gap-1"
+                  >
+                    Mua ngay <ChevronRight size={13} />
+                  </Link>
                 </div>
-                <div className="w-full flex-1 rounded-xl overflow-hidden my-5 min-h-[140px]">
-                  <img src="/promo-featured.jpg" alt="Sản phẩm nổi bật" className="w-full h-full object-cover" />
-                </div>
-                <Link
-                  to="/products"
-                  className="bg-white text-gray-800 px-6 py-2 rounded-full text-xs font-black uppercase hover:bg-[#fbc02d] transition flex items-center gap-1"
-                >
-                  Mua ngay <ChevronRight size={13} />
-                </Link>
               </div>
             </div>
             <div className="flex justify-center mt-8">
