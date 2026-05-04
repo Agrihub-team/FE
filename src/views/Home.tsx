@@ -417,8 +417,8 @@ export const Home = () => {
                   <h3 className="text-lg font-black uppercase mt-2">Sản phẩm nổi bật</h3>
                   <p className="text-xs mt-2 text-green-200 italic">Mua sắm thoải mái chỉ từ 200,000đ</p>
                 </div>
-                <div className="w-full h-32 bg-white/10 rounded-xl flex items-center justify-center border border-white/20 my-5">
-                  <span className="text-[10px] font-black text-white/60 uppercase tracking-widest">Agri-Hub</span>
+                <div className="w-full flex-1 rounded-xl overflow-hidden my-5 min-h-[140px]">
+                  <img src="/promo-featured.jpg" alt="Sản phẩm nổi bật" className="w-full h-full object-cover" />
                 </div>
                 <Link
                   to="/products"
