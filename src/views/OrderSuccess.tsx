@@ -17,7 +17,7 @@ export const OrderSuccess = () => {
   const [searchParams] = useSearchParams();
   const [order, setOrder] = useState<any>(null);
   const [loading, setLoading] = useState(true);
-  const { loadCart } = useCartStore();
+  const clearCart = useCartStore((s) => s.clearCart);
 
   useEffect(() => {
     // 1. Lấy mã đơn hàng từ VNPay (nếu có)
@@ -47,9 +47,8 @@ export const OrderSuccess = () => {
     fetchOrder();
     window.scrollTo(0, 0);
 
-    // VNPAY về thành công → BE đã xóa cart trong DB, reload lại store cho khớp
     if (searchParams.get("vnp_ResponseCode") === "00") {
-      loadCart();
+      clearCart();
     }
   }, [id, searchParams]);
 
@@ -96,26 +95,24 @@ export const OrderSuccess = () => {
     );
   }
 
-  // 🚀 LOGIC QUÉT VOUCHER (Giữ nguyên của bạn)
   const voucherDetails = (() => {
     let totalDiscount = 0;
-    let listCodes = [];
-    if (order.voucher) {
-      const disc = order.voucher.discountAmount || 0;
-      if (disc > 0) {
-        totalDiscount += disc;
-        if (order.voucher.code) listCodes.push(order.voucher.code);
-      }
+    const listCodes: string[] = [];
+    if (order.voucher?.code) listCodes.push(order.voucher.code);
+    if ((order.voucher?.discountAmount || 0) > 0) {
+      totalDiscount = order.voucher.discountAmount;
     }
-    if (order.items) {
-      order.items.forEach(item => {
-        if (item.itemVoucher && item.itemVoucher.discount > 0) {
+    if (!totalDiscount && order.items) {
+      order.items.forEach((item: any) => {
+        if (item.itemVoucher?.discount > 0) {
           totalDiscount += Number(item.itemVoucher.discount);
-          if (item.itemVoucher.code && !listCodes.includes(item.itemVoucher.code)) {
+          if (item.itemVoucher.code && !listCodes.includes(item.itemVoucher.code))
             listCodes.push(item.itemVoucher.code);
-          }
         }
       });
+    }
+    if (!totalDiscount) {
+      totalDiscount = Math.max(0, (order.subTotal || 0) + (order.shippingFee || 0) - (order.totalAmount || 0));
     }
     return { totalDiscount, codes: listCodes.join(", ") };
   })();
@@ -218,7 +215,9 @@ export const OrderSuccess = () => {
                 </div>
                 {voucherDetails.totalDiscount > 0 && (
                   <div className="flex justify-between font-bold text-emerald-600 bg-emerald-50 px-3 py-2 rounded-lg border border-emerald-100">
-                    <span className="flex items-center gap-1.5"><Tag size={14} /> Voucher giảm giá:</span>
+                    <span className="flex items-center gap-1.5">
+                      <Tag size={14} /> Voucher giảm giá{voucherDetails.codes ? `: ${voucherDetails.codes}` : ""}
+                    </span>
                     <span>-{voucherDetails.totalDiscount.toLocaleString()}đ</span>
                   </div>
                 )}

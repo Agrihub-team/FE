@@ -230,27 +230,22 @@ export const Profile = () => {
   const getOrderVoucherInfo = (order: any) => {
     if (!order) return { totalDiscount: 0, codes: "" };
     let totalDiscount = 0;
-    let codes: string[] = [];
+    const codes: string[] = [];
 
-    if (order.voucher) {
-      const globalDiscount = order.voucher.discountAmount || 0;
-      if (globalDiscount > 0) {
-        totalDiscount += globalDiscount;
-        if (order.voucher.code && !codes.includes(order.voucher.code)) codes.push(order.voucher.code);
-      }
+    if (order.voucher?.code) codes.push(order.voucher.code);
+    if ((order.voucher?.discountAmount || 0) > 0) {
+      totalDiscount = order.voucher.discountAmount;
     }
-
-    if (order.items && order.items.length > 0) {
+    if (!totalDiscount && order.items?.length > 0) {
       order.items.forEach((item: any) => {
-        const itemV = item.itemVoucher;
-        if (itemV) {
-          const itemDiscount = itemV.discount || 0;
-          if (itemDiscount > 0) {
-            totalDiscount += itemDiscount;
-            if (itemV.code && !codes.includes(itemV.code)) codes.push(itemV.code);
-          }
+        if (item.itemVoucher?.discount > 0) {
+          totalDiscount += Number(item.itemVoucher.discount);
+          if (item.itemVoucher.code && !codes.includes(item.itemVoucher.code)) codes.push(item.itemVoucher.code);
         }
       });
+    }
+    if (!totalDiscount) {
+      totalDiscount = Math.max(0, (order.subTotal || 0) + (order.shippingFee || 0) - (order.totalAmount || 0));
     }
     return { totalDiscount, codes: codes.join(", ") };
   };
@@ -766,7 +761,9 @@ export const Profile = () => {
                     </div>
                     {vInfo.totalDiscount > 0 && (
                       <div className="flex justify-between items-center px-4 py-3 text-sm font-bold text-emerald-700 bg-emerald-50/60">
-                        <span className="flex items-center gap-1.5"><Tag size={13}/> Giảm giá voucher</span>
+                        <span className="flex items-center gap-1.5">
+                          <Tag size={13}/> Giảm giá{vInfo.codes ? ` (${vInfo.codes})` : ""}
+                        </span>
                         <span>-{vInfo.totalDiscount.toLocaleString()}đ</span>
                       </div>
                     )}
