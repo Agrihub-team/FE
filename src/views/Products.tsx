@@ -7,6 +7,7 @@ import { useCartStore } from "../store/cartStore";
 import { apiClient } from "../utils/api";
 import { toast } from "sonner";
 import { IMAGE_URL } from "../utils/config";
+import { ShoppingCart } from "lucide-react";
 
 export const Products = () => {
   const [categories, setCategories] = useState([]);
@@ -375,47 +376,52 @@ export const Products = () => {
               <div className="grid grid-cols-2 lg:grid-cols-4 gap-5 flex-1 content-start pb-10">
                 {currentItems.map((p) => {
                   const price = getProductPrice(p);
+                  const originalPrice = parseFloat(p.price_bag_25kg) || parseFloat(p.price_bag_50kg) || parseFloat(p.price_bag) || price;
+                  const hasSale = price < originalPrice && originalPrice > 0;
+                  const salePct = hasSale ? Math.round((1 - price / originalPrice) * 100) : 0;
                   return (
                     <div
                       key={p._id}
-                      className="bg-white border border-gray-100 rounded-2xl p-4 hover:border-[#047857] hover:shadow-md transition flex flex-col h-full group relative"
+                      className="bg-white border border-gray-100 rounded-2xl overflow-hidden hover:border-[#047857] hover:shadow-lg transition-all flex flex-col group relative"
                     >
-                      <Link
-                        to={`/products/${p._id}`}
-                        className="flex-1 flex flex-col items-center"
-                      >
-                        <div className="w-full h-40 flex items-center justify-center mb-4 bg-white rounded-lg overflow-hidden">
+                      {hasSale && (
+                        <span className="absolute top-2 left-2 z-10 bg-red-500 text-white text-[9px] font-black px-2 py-0.5 rounded-full uppercase">
+                          -{salePct}%
+                        </span>
+                      )}
+                      <Link to={`/products/${p._id}`} className="block">
+                        <div className="h-36 bg-gray-50 flex items-center justify-center overflow-hidden p-3">
                           <img
                             src={`${IMAGE_URL}/${p.image}`}
                             alt={p.name}
-                            className="max-w-full max-h-full object-contain transition-transform duration-500 group-hover:scale-105"
-                            onError={(e) => {
-                              (e.target as HTMLImageElement).src =
-                                "https://via.placeholder.com/150";
-                            }}
+                            className="h-full w-full object-contain group-hover:scale-105 transition-transform duration-300"
+                            onError={(e) => { (e.target as HTMLImageElement).src = "https://via.placeholder.com/150"; }}
                           />
                         </div>
-                        <h3 className="text-[11px] font-bold text-gray-700 text-center mb-2 line-clamp-2 h-10 group-hover:text-[#047857] transition-colors uppercase leading-tight">
-                          {p.name}
-                        </h3>
-                        <div className="mt-auto flex flex-col items-center w-full">
-                          <p className="text-lg font-black text-[#047857] text-center mb-1">
+                      </Link>
+                      <div className="p-3 flex flex-col flex-1">
+                        <Link to={`/products/${p._id}`}>
+                          <h3 className="text-[11px] font-bold text-gray-700 group-hover:text-[#047857] line-clamp-2 uppercase leading-tight mb-2 min-h-[2.5rem]">
+                            {p.name}
+                          </h3>
+                        </Link>
+                        <div className="mt-auto">
+                          {hasSale && (
+                            <p className="text-[10px] text-gray-400 line-through leading-none">
+                              {originalPrice.toLocaleString()}đ
+                            </p>
+                          )}
+                          <p className={`text-[15px] font-black leading-tight mb-2 ${hasSale ? "text-red-600" : "text-[#047857]"}`}>
                             {price.toLocaleString()}đ
                           </p>
-                          <p className="text-[9px] font-bold text-gray-300 text-center mb-4 italic uppercase">
-                            Tồn kho: {p.stock_25kg || p.stock_total_kg || 0} bao
-                          </p>
+                          <button
+                            onClick={(e) => { e.preventDefault(); handleAddToCart(p); }}
+                            className="w-full flex items-center justify-center gap-1.5 bg-[#047857] hover:bg-[#fbc02d] hover:text-gray-900 text-white py-2 rounded-xl text-[11px] font-bold uppercase transition-colors active:scale-95"
+                          >
+                            <ShoppingCart size={13} /> Thêm vào giỏ
+                          </button>
                         </div>
-                      </Link>
-                      <button
-                        onClick={(e) => {
-                          e.preventDefault();
-                          handleAddToCart(p);
-                        }}
-                        className="w-full bg-[#047857] text-white py-2.5 rounded-full text-sm font-bold hover:bg-[#035b42] transition-colors active:scale-95"
-                      >
-                        Thêm vào giỏ
-                      </button>
+                      </div>
                     </div>
                   );
                 })}
