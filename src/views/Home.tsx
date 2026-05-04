@@ -202,6 +202,7 @@ const PromoCard = ({ color, title, desc, to = "/products" }: any) => (
 export const Home = () => {
   const [categories, setCategories] = useState<any[]>([]);
   const [allProducts, setAllProducts] = useState<any[]>([]);
+  const [specialOffers, setSpecialOffers] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const addItem = useCartStore((s) => s.addItem);
   const navigate = useNavigate();
@@ -236,13 +237,16 @@ export const Home = () => {
     const loadData = async () => {
       try {
         setLoading(true);
-        const [catData, prodData] = await Promise.all([
+        const apiBase = import.meta.env.VITE_API_URL || "http://localhost:3001/api";
+        const [catData, prodData, voucherRes] = await Promise.all([
           categoryService.getAll(),
           productService.getAll(),
+          fetch(`${apiBase}/vouchers/special-offers`).then(r => r.json()).catch(() => ({ success: false })),
         ]);
         const allCats = catData?.data || catData || [];
         setCategories(allCats.filter((c: any) => !c.status || c.status === "active"));
         setAllProducts(prodData?.data || prodData?.products || prodData || []);
+        if (voucherRes.success) setSpecialOffers(voucherRes.data || []);
       } catch (e) {
         console.error("Lỗi tải dữ liệu Home:", e);
       } finally {
@@ -252,9 +256,17 @@ export const Home = () => {
     loadData();
   }, []);
 
-  const newProducts    = allProducts.filter((p) => p.type === "new").slice(0, 5);
-  const hotProducts    = allProducts.filter((p) => p.type === "hot").slice(0, 8);
-  const discountProducts = allProducts.filter((p) => p.is_discount_active);
+  // Luôn đủ 5 sp: sp type=new trước, pad bằng sp còn lại
+  const newTagged = allProducts.filter((p) => p.type === "new");
+  const newProducts = newTagged.length >= 5
+    ? newTagged.slice(0, 5)
+    : [...newTagged, ...allProducts.filter((p) => p.type !== "new")].slice(0, 5);
+
+  // Luôn đủ 8 sp: sp type=hot trước, pad bằng sp còn lại
+  const hotTagged = allProducts.filter((p) => p.type === "hot");
+  const hotProducts = hotTagged.length >= 8
+    ? hotTagged.slice(0, 8)
+    : [...hotTagged, ...allProducts.filter((p) => p.type !== "hot")].slice(0, 8);
 
   if (loading)
     return (
@@ -308,7 +320,7 @@ export const Home = () => {
           <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm">
             <SectionHeader title="Sản phẩm mới nhập" to="/products?type=new" />
             <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-              {(newProducts.length > 0 ? newProducts : allProducts.slice(0, 5)).map((p, idx) => (
+              {newProducts.map((p, idx) => (
                 <ProductCard key={p._id || idx} product={p} onAdd={handleAddToCart} />
               ))}
             </div>
@@ -333,7 +345,7 @@ export const Home = () => {
                 </Link>
               </div>
               <div className="lg:w-[78%] grid grid-cols-2 md:grid-cols-4 gap-4">
-                {(hotProducts.length > 0 ? hotProducts : allProducts.slice(0, 8)).map((p, idx) => (
+                {hotProducts.map((p, idx) => (
                   <ProductCard key={p._id || idx} product={p} onAdd={handleAddToCart} />
                 ))}
               </div>
@@ -351,7 +363,7 @@ export const Home = () => {
         </section>
 
         {/* FLASH SALE */}
-        {discountProducts.length > 0 && (
+        {specialOffers.length > 0 && (
           <section className="max-w-[1200px] mx-auto px-4 mt-8">
             <div className="rounded-2xl overflow-hidden border-2 border-red-500 shadow-lg bg-white">
               <div className="bg-gradient-to-r from-red-600 to-red-500 px-6 py-4 flex items-center justify-between">
@@ -363,7 +375,7 @@ export const Home = () => {
                 </span>
               </div>
               <div className="p-5 flex gap-4 overflow-x-auto no-scrollbar">
-                {discountProducts.map((p, idx) => (
+                {specialOffers.map((p, idx) => (
                   <FlashSaleCard key={p._id || idx} product={p} onAdd={handleAddToCart} />
                 ))}
               </div>
