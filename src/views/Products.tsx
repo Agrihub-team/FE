@@ -6,8 +6,7 @@ import { Footer } from "../components/Footer";
 import { useCartStore } from "../store/cartStore";
 import { apiClient } from "../utils/api";
 import { toast } from "sonner";
-
-const IMAGE_URL = "http://localhost:3001/images/products";
+import { IMAGE_URL } from "../utils/config";
 
 export const Products = () => {
   const [categories, setCategories] = useState([]);

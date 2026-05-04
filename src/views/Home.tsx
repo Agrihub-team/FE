@@ -8,12 +8,7 @@ import { categoryService } from "../controllers/categoryService";
 import { useCartStore } from "../store/cartStore";
 import { toast } from "sonner";
 import { ChevronRight, ShoppingCart, Zap, Clock } from "lucide-react";
-
-const IMAGE_PRODUCT_URL =
-  import.meta.env?.VITE_IMAGE_URL || "http://localhost:3001/images/products";
-const IMAGE_CAT_URL =
-  import.meta.env?.VITE_CAT_IMAGE_URL ||
-  "http://localhost:3001/images/categories";
+import { IMAGE_URL as IMAGE_PRODUCT_URL, IMAGE_CAT_URL } from "../utils/config";
 
 const calculateSalePrice = (product, originalPrice) => {
   if (!product.voucherInfo || originalPrice <= 0) return originalPrice;

@@ -7,12 +7,7 @@ import { useCartStore } from "../store/cartStore";
 import { useAuthStore } from "../store/authStore";
 import { apiClient } from "../utils/api";
 import { useIdleTimeout } from "../hooks/useIdleTimeout";
-
-const IMAGE_BASE_URL =
-  import.meta.env?.VITE_IMAGE_URL || "http://localhost:3001/images/products";
-const IMAGE_CAT_URL =
-  import.meta.env?.VITE_CAT_IMAGE_URL ||
-  "http://localhost:3001/images/categories";
+import { IMAGE_URL as IMAGE_BASE_URL, IMAGE_CAT_URL } from "../utils/config";
 
 export const Header = () => {
   const [categories, setCategories] = useState<Category[]>([]);
