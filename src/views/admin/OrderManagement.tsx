@@ -6,6 +6,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { apiClient } from "../../utils/api";
+import { IMAGE_URL } from '../../utils/config';
 
 export const OrderManagement = () => {
   const [orders, setOrders] = useState<any[]>([]);
@@ -411,7 +412,7 @@ export const OrderManagement = () => {
                                <tr key={idx} className="hover:bg-gray-50">
                                   <td className="px-4 py-3 flex items-center gap-3">
                                     <div className="w-12 h-12 bg-white border border-gray-200 rounded-lg p-1 shrink-0">
-                                      <img src={`http://localhost:3001/images/products/${item.image || item.product?.image}`} className="w-full h-full object-contain" onError={e=>e.target.src='https://via.placeholder.com/60'} />
+                                      <img src={`${IMAGE_URL}/${item.image || item.product?.image}`} className="w-full h-full object-contain" onError={e=>e.target.src='https://via.placeholder.com/60'} />
                                     </div>
                                     <div>
                                       <p className="text-sm font-medium text-gray-900 line-clamp-2">{item.name || item.product?.name}</p>

@@ -13,8 +13,8 @@ export const authService = {
   resetPassword: (data: any) =>
     apiClient.post('/auth/reset-password', data),
 
-  changePassword: (userId: string, data: any) =>
-    apiClient.put(`/auth/change-password/${userId}`, data),
+  changePassword: (data: any) =>
+    apiClient.post('/auth/change-password', data),
 
  googleLogin: (data: { credential: string }) =>
   apiClient.post<{ user: any; token: string }>('/auth/google', data),

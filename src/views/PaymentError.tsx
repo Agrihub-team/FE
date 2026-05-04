@@ -32,8 +32,8 @@ export const PaymentError = () => {
           </p>
 
           <div className="space-y-3">
-            <Link to="/checkout" className="w-full flex items-center justify-center gap-2 bg-[#047857] hover:bg-[#035b42] text-white py-4 rounded-xl font-bold uppercase transition-all shadow-md">
-              Thử thanh toán lại
+            <Link to="/cart" className="w-full flex items-center justify-center gap-2 bg-[#047857] hover:bg-[#035b42] text-white py-4 rounded-xl font-bold uppercase transition-all shadow-md">
+              Quay lại giỏ hàng
             </Link>
             <Link to="/" className="w-full flex items-center justify-center gap-2 bg-white border-2 border-slate-200 hover:bg-slate-50 text-slate-600 py-4 rounded-xl font-bold uppercase transition-all">
               <ArrowLeft size={18} /> Về trang chủ

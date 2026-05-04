@@ -4,8 +4,9 @@ import { Search, Landmark } from "lucide-react";
 import { apiClient } from "../../utils/api";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
+import { toast } from "sonner";
+import { IMAGE_URL } from '../../utils/config';
 
-const IMAGE_URL = "http://localhost:3001/images/products";
 
 const DiscountProductPage = () => {
   const [products, setProducts] = useState([]);
@@ -39,22 +40,22 @@ const handleSaveDiscount = async (id) => {
     const data = discounts[id] || {};
 
     if (data.percent === undefined) {
-      alert("Nhập % giảm");
+      toast.warning("Vui lòng nhập % giảm giá");
       return;
     }
 
     if (!data.start || !data.end) {
-      alert("Chọn ngày");
+      toast.warning("Vui lòng chọn ngày bắt đầu và kết thúc");
       return;
     }
 
     await apiClient.put(`/products/${id}/discount`, {
       percent: data.percent,
-      start: data.start.toISOString(), // 👈 FIX
-      end: data.end.toISOString(),     // 👈 FIX
+      start: data.start.toISOString(),
+      end: data.end.toISOString(),
     });
 
-    alert("Lưu thành công");
+    toast.success("Lưu discount thành công!");
 
     const res = await apiClient.get("/products");
     setProducts(res?.products || []);
@@ -66,7 +67,7 @@ const handleSaveDiscount = async (id) => {
 
   } catch (err) {
     console.log(err);
-    alert("Lỗi khi lưu");
+    toast.error("Lỗi khi lưu discount");
   }
 };
 

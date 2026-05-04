@@ -1,4 +1,4 @@
-import apiClient from '../utils/api';
+import { apiClient } from '../utils/api';
 import { Comment } from '../models/comment';
 
 export const commentService = {

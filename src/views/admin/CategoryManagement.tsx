@@ -5,8 +5,8 @@ import { toast } from "sonner";
 import { apiClient } from "../../utils/api";
 import { Category } from "../../models/category";
 import { Product } from "../../models/product";
+import { IMAGE_CAT_URL } from '../../utils/config';
 
-const IMAGE_CAT_URL = 'http://localhost:3001/images/categories';
 
 export const CategoryManagement = () => {
   const [cats, setCats] = useState<Category[]>([]);

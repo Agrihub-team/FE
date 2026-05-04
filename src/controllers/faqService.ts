@@ -1,4 +1,4 @@
-import apiClient from '../utils/api';
+import { apiClient } from '../utils/api';
 import { FAQ } from '../models/faq';
 
 export const faqService = {

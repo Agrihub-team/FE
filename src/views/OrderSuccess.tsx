@@ -2,6 +2,7 @@
 import { useEffect, useState } from "react";
 import { useParams, Link, useSearchParams } from "react-router-dom"; // Thêm useSearchParams
 import { orderService } from "../controllers/orderService";
+import { useCartStore } from "../store/cartStore";
 import { 
   CheckCircle2, Printer, ShoppingBag, Calendar, MapPin, 
   CreditCard, Tag, PackageCheck, ChevronRight, FileText, NotebookPen
@@ -9,12 +10,14 @@ import {
 
 import { Header } from "../components/Header";
 import { Footer } from "../components/Footer";
+import { IMAGE_URL } from '../utils/config';
 
 export const OrderSuccess = () => {
   const { id } = useParams();
-  const [searchParams] = useSearchParams(); // Hook để lấy query string từ VNPay (?vnp_...)
+  const [searchParams] = useSearchParams();
   const [order, setOrder] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const { loadCart } = useCartStore();
 
   useEffect(() => {
     // 1. Lấy mã đơn hàng từ VNPay (nếu có)
@@ -43,6 +46,11 @@ export const OrderSuccess = () => {
 
     fetchOrder();
     window.scrollTo(0, 0);
+
+    // VNPAY về thành công → BE đã xóa cart trong DB, reload lại store cho khớp
+    if (searchParams.get("vnp_ResponseCode") === "00") {
+      loadCart();
+    }
   }, [id, searchParams]);
 
   // --- LOGIC XỬ LÝ TRẠNG THÁI THANH TOÁN ---
@@ -177,7 +185,7 @@ export const OrderSuccess = () => {
                   return (
                     <div key={idx} className="flex gap-4 items-center border border-slate-100 p-4 rounded-xl bg-white">
                       <div className="w-16 h-16 bg-slate-50 rounded-lg p-1 border border-slate-100 shrink-0 flex items-center justify-center print:hidden">
-                        <img src={`http://localhost:3001/images/products/${item.image}`} className="w-full h-full object-contain" alt={item.name} />
+                        <img src={`${IMAGE_URL}/${item.image}`} className="w-full h-full object-contain" alt={item.name} />
                       </div>
                       <div className="flex-1">
                         <p className="font-bold text-slate-800 uppercase text-[13px]">{item.name}</p>

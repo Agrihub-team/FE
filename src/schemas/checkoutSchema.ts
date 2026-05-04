@@ -2,7 +2,7 @@
 import { z } from 'zod';
 
 // Biểu thức chính quy check đúng định dạng số điện thoại Việt Nam
-const phoneRegex = /^(0|\+84)[3|5|7|8|9][0-9]{8}$/;
+const phoneRegex = /^(0|\+84)[35789][0-9]{8}$/;
 
 export const checkoutSchema = z.object({
   receiver_name: z.string().min(2, "Tên người nhận phải từ 2 ký tự trở lên"),

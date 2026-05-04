@@ -6,205 +6,230 @@ import { Footer } from "../components/Footer";
 import { productService } from "../controllers/productService";
 import { categoryService } from "../controllers/categoryService";
 import { useCartStore } from "../store/cartStore";
+import { toast } from "sonner";
+import { ChevronRight, ShoppingCart, Zap, Clock } from "lucide-react";
 
-const IMAGE_PRODUCT_URL = import.meta.env?.VITE_IMAGE_URL || 'http://localhost:3001/images/products';
-const IMAGE_CAT_URL = import.meta.env?.VITE_CAT_IMAGE_URL || 'http://localhost:3001/images/categories';
+const IMAGE_PRODUCT_URL =
+  import.meta.env?.VITE_IMAGE_URL || "http://localhost:3001/images/products";
+const IMAGE_CAT_URL =
+  import.meta.env?.VITE_CAT_IMAGE_URL ||
+  "http://localhost:3001/images/categories";
 
-// --- HÀM TÍNH GIÁ SALE DÙNG CHUNG ---
 const calculateSalePrice = (product, originalPrice) => {
   if (!product.voucherInfo || originalPrice <= 0) return originalPrice;
   const { discount, type } = product.voucherInfo;
   const discountVal = parseFloat(discount) || 0;
-  
-  if (type === 'percentage') {
-    return originalPrice * (1 - discountVal / 100);
-  }
+  if (type === "percentage") return originalPrice * (1 - discountVal / 100);
   return Math.max(0, originalPrice - discountVal);
 };
 
-// --- COMPONENT ĐẾM NGƯỢC THỜI GIAN THỰC ---
+// ── COUNTDOWN ────────────────────────────────────────────────────────────────
 const CountdownTimer = ({ endDate }) => {
-  const [timeLeft, setTimeLeft] = useState("");
+  const [timeLeft, setTimeLeft] = useState({ h: "00", m: "00", s: "00" });
 
   useEffect(() => {
     if (!endDate) return;
-    const timer = setInterval(() => {
-      const now = new Date().getTime();
-      const distance = new Date(endDate).getTime() - now;
-
-      if (distance < 0) {
-        setTimeLeft("Đã hết hạn");
-        clearInterval(timer);
-        return;
-      }
-
-      const days = Math.floor(distance / (1000 * 60 * 60 * 24));
-      const hours = Math.floor((distance % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
-      const minutes = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60));
-      const seconds = Math.floor((distance % (1000 * 60)) / 1000);
-
-      setTimeLeft(`${days > 0 ? days + "n " : ""}${hours}:${minutes}:${seconds}`);
-    }, 1000);
-    return () => clearInterval(timer);
+    const tick = () => {
+      const distance = new Date(endDate).getTime() - Date.now();
+      if (distance <= 0) { setTimeLeft({ h: "00", m: "00", s: "00" }); return; }
+      const h = String(Math.floor(distance / 3_600_000)).padStart(2, "0");
+      const m = String(Math.floor((distance % 3_600_000) / 60_000)).padStart(2, "0");
+      const s = String(Math.floor((distance % 60_000) / 1_000)).padStart(2, "0");
+      setTimeLeft({ h, m, s });
+    };
+    tick();
+    const id = setInterval(tick, 1000);
+    return () => clearInterval(id);
   }, [endDate]);
 
-  return <b className="text-red-600 font-black ml-1">{timeLeft || "00:00:00"}</b>;
-};
-
-// Component Sản phẩm thường - ĐÃ CẬP NHẬT HIỂN THỊ GIÁ SALE
-const ProductCard = ({ product, onAdd }: any) => {
-  const originalPrice = parseFloat(product.price_bag_25kg) || parseFloat(product.price_bag_50kg) || parseFloat(product.price_bag) || 0;
-  const salePrice = calculateSalePrice(product, originalPrice);
-  const hasSale = salePrice < originalPrice;
-
   return (
-    <div className="bg-white border border-gray-200 rounded-xl p-4 hover:border-[#047857] hover:shadow-md transition flex flex-col h-full group relative">
-      <Link to={`/products/${product._id}`} className="flex flex-col flex-1">
-        <div className="h-40 mb-3 flex items-center justify-center overflow-hidden">
-          <img src={`${IMAGE_PRODUCT_URL}/${product.image}`} alt={product.name} className="max-h-full object-contain group-hover:scale-105 transition duration-300" />
-        </div>
-        <h3 className="text-sm text-gray-800 mb-1 group-hover:text-[#047857] line-clamp-2 h-10 uppercase font-medium">{product.name}</h3>
-        
-        <div className="mt-auto mb-3 flex flex-col">
-          {hasSale && (
-            <span className="text-[11px] text-gray-400 line-through">{(originalPrice).toLocaleString()}đ</span>
-          )}
-          <span className={`text-base font-bold ${hasSale ? 'text-red-600' : 'text-[#047857]'}`}>
-            {(salePrice).toLocaleString()}đ
+    <div className="flex items-center gap-1">
+      {[timeLeft.h, timeLeft.m, timeLeft.s].map((v, i) => (
+        <span key={i} className="flex items-center gap-1">
+          <span className="bg-red-600 text-white text-[11px] font-black px-1.5 py-0.5 rounded min-w-[26px] text-center tabular-nums">
+            {v}
           </span>
-        </div>
-      </Link>
-      <button 
-        onClick={(e) => { e.preventDefault(); onAdd(product); }} 
-        className="w-full bg-[#047857] text-white py-2 rounded-full text-sm font-medium hover:bg-[#fbc02d] hover:text-gray-900 transition-colors"
-      >
-        Thêm vào giỏ
-      </button>
+          {i < 2 && <span className="text-red-500 font-black text-xs">:</span>}
+        </span>
+      ))}
     </div>
   );
 };
 
-// Component Flash Sale
-const FlashSaleCard = ({ product, onAdd }: any) => {
-  const originalPrice = parseFloat(product.price_bag_25kg) || parseFloat(product.price_bag) || 0;
-  const discountValue = parseFloat(product.voucherInfo?.discount) || 0;
+// ── SECTION HEADER ────────────────────────────────────────────────────────────
+const SectionHeader = ({ title, to }: { title: string; to?: string }) => (
+  <div className="flex items-center justify-between mb-6">
+    <h2 className="text-[17px] md:text-xl font-black text-gray-900 uppercase tracking-tight border-l-4 border-[#047857] pl-4">
+      {title}
+    </h2>
+    {to && (
+      <Link
+        to={to}
+        className="flex items-center gap-1 text-xs font-bold text-[#047857] hover:text-[#fbc02d] transition-colors"
+      >
+        Xem tất cả <ChevronRight size={14} />
+      </Link>
+    )}
+  </div>
+);
+
+// ── PRODUCT CARD ──────────────────────────────────────────────────────────────
+const ProductCard = ({ product, onAdd }: any) => {
+  const originalPrice =
+    parseFloat(product.price_bag_25kg) ||
+    parseFloat(product.price_bag_50kg) ||
+    parseFloat(product.price_bag) || 0;
   const salePrice = calculateSalePrice(product, originalPrice);
+  const hasSale = salePrice < originalPrice;
+  const salePct = hasSale
+    ? Math.round((1 - salePrice / originalPrice) * 100)
+    : 0;
 
   return (
-    <div className="min-w-[280px] md:min-w-[350px] flex flex-col p-4 bg-white rounded-2xl border border-gray-200 hover:border-[#047857] hover:shadow-lg transition-all group relative h-full flex-shrink-0">
-      <div className="flex gap-4 flex-1">
-        <Link to={`/products/${product._id}`} className="w-1/3 relative flex items-center justify-center p-1 h-24">
-          <img src={`${IMAGE_PRODUCT_URL}/${product.image}`} alt={product.name} className="max-h-full object-contain" />
+    <div className="bg-white border border-gray-100 rounded-2xl overflow-hidden hover:border-[#047857] hover:shadow-lg transition-all flex flex-col group relative">
+      {hasSale && (
+        <span className="absolute top-2 left-2 z-10 bg-red-500 text-white text-[9px] font-black px-2 py-0.5 rounded-full uppercase">
+          -{salePct}%
+        </span>
+      )}
+      <Link to={`/products/${product._id}`} className="block">
+        <div className="h-36 bg-gray-50 flex items-center justify-center overflow-hidden p-3">
+          <img
+            src={`${IMAGE_PRODUCT_URL}/${product.image}`}
+            alt={product.name}
+            className="h-full w-full object-contain group-hover:scale-105 transition-transform duration-300"
+          />
+        </div>
+      </Link>
+      <div className="p-3 flex flex-col flex-1">
+        <Link to={`/products/${product._id}`}>
+          <h3 className="text-[11px] font-bold text-gray-700 group-hover:text-[#047857] line-clamp-2 uppercase leading-tight mb-2 min-h-[2.5rem]">
+            {product.name}
+          </h3>
         </Link>
-        <div className="w-2/3 flex flex-col justify-center">
-          <h3 className="font-bold text-gray-800 text-sm line-clamp-2 hover:text-[#047857] mb-1 leading-tight uppercase">{product.name}</h3>
-          
-          <p className="text-[10px] text-red-600 font-bold uppercase italic mb-1">
-            Đang giảm: {discountValue.toLocaleString()}{product.voucherInfo?.type === 'percentage' ? '%' : 'đ'}
+        <div className="mt-auto">
+          {hasSale && (
+            <p className="text-[10px] text-gray-400 line-through leading-none">
+              {originalPrice.toLocaleString()}đ
+            </p>
+          )}
+          <p className={`text-[15px] font-black leading-tight mb-2 ${hasSale ? "text-red-600" : "text-[#047857]"}`}>
+            {salePrice.toLocaleString()}đ
           </p>
-
-          <span className="text-[11px] text-gray-400 line-through">{(originalPrice).toLocaleString()}đ</span>
-          <span className="text-lg font-black text-red-600">{(salePrice).toLocaleString()}đ</span>
+          <button
+            onClick={(e) => { e.preventDefault(); onAdd(product); }}
+            className="w-full flex items-center justify-center gap-1.5 bg-[#047857] hover:bg-[#fbc02d] hover:text-gray-900 text-white py-2 rounded-xl text-[11px] font-bold uppercase transition-colors active:scale-95"
+          >
+            <ShoppingCart size={13} /> Thêm vào giỏ
+          </button>
         </div>
       </div>
-      
-      <div className="mt-4 pt-3 border-t border-dashed border-gray-100">
-        <div className="flex justify-between items-center text-[10px] mb-2 uppercase font-bold">
-          <div className="flex items-center text-gray-500">
-            <span>Kết thúc:</span>
-            <CountdownTimer endDate={product.voucherInfo?.endDate} />
-          </div>
-          <span className="text-gray-500">Còn: <b className="text-blue-600">{product.voucherInfo?.quantity || 0}</b></span>
+    </div>
+  );
+};
+
+// ── FLASH SALE CARD ───────────────────────────────────────────────────────────
+const FlashSaleCard = ({ product, onAdd }: any) => {
+  const originalPrice =
+    parseFloat(product.price_bag_25kg) || parseFloat(product.price_bag) || 0;
+  const salePrice = calculateSalePrice(product, originalPrice);
+  const pct = originalPrice > 0
+    ? Math.round((1 - salePrice / originalPrice) * 100)
+    : 0;
+
+  return (
+    <div className="w-[260px] md:w-[300px] flex-shrink-0 bg-white rounded-2xl border border-gray-100 hover:border-red-300 hover:shadow-lg transition-all flex flex-col overflow-hidden group">
+      <div className="flex gap-3 p-4 flex-1">
+        <Link to={`/products/${product._id}`} className="relative w-20 h-20 shrink-0 bg-gray-50 rounded-xl flex items-center justify-center overflow-hidden">
+          <img
+            src={`${IMAGE_PRODUCT_URL}/${product.image}`}
+            alt={product.name}
+            className="w-full h-full object-contain p-1 group-hover:scale-105 transition-transform"
+          />
+          {pct > 0 && (
+            <span className="absolute top-0 right-0 bg-red-500 text-white text-[9px] font-black px-1.5 py-0.5 rounded-bl-lg">
+              -{pct}%
+            </span>
+          )}
+        </Link>
+        <div className="flex flex-col justify-center flex-1 min-w-0">
+          <h3 className="text-[12px] font-bold text-gray-800 line-clamp-2 uppercase leading-tight mb-1">
+            {product.name}
+          </h3>
+          <p className="text-[10px] text-gray-400 line-through">
+            {originalPrice.toLocaleString()}đ
+          </p>
+          <p className="text-[17px] font-black text-red-600 leading-tight">
+            {salePrice.toLocaleString()}đ
+          </p>
         </div>
-        
-        <button 
-          onClick={(e) => { e.preventDefault(); onAdd(product); }} 
-          className="w-full py-3 rounded-xl text-xs font-black text-white uppercase tracking-widest transition-all btn-rainbow shadow-md hover:shadow-xl active:scale-95"
+      </div>
+
+      <div className="px-4 pb-4 pt-2 border-t border-dashed border-gray-100 space-y-2">
+        <div className="flex items-center justify-between text-[10px] font-bold text-gray-500">
+          <span className="flex items-center gap-1">
+            <Clock size={11} className="text-red-500" /> Kết thúc:
+          </span>
+          <CountdownTimer endDate={product.voucherInfo?.endDate} />
+        </div>
+        <button
+          onClick={(e) => { e.preventDefault(); onAdd(product); }}
+          className="w-full py-2.5 rounded-xl text-[11px] font-black text-white uppercase tracking-wider btn-rainbow shadow hover:shadow-md active:scale-95 transition-transform flex items-center justify-center gap-1.5"
         >
-          MUA NGAY
+          <Zap size={12} /> Mua ngay
         </button>
       </div>
     </div>
   );
 };
 
-const PromoCard = ({ color, title, desc }: any) => (
-  <div className={`${color} rounded-lg p-6 min-h-[160px] border border-gray-200 shadow-sm hover:shadow-md transition flex flex-col justify-center`}>
-    <h3 className="text-lg font-bold text-gray-800 mb-1">{title}</h3>
-    <p className="text-gray-700 text-sm mb-4">{desc}</p>
-    <Link to="/products" className="bg-[#047857] text-white px-5 py-2 rounded text-sm font-medium hover:bg-[#fbc02d] hover:text-gray-900 transition-colors w-fit">Xem ngay</Link>
-  </div>
+// ── PROMO CARD ────────────────────────────────────────────────────────────────
+const PromoCard = ({ color, title, desc, to = "/products" }: any) => (
+  <Link
+    to={to}
+    className={`${color} rounded-2xl p-6 min-h-[150px] border border-white/40 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all flex flex-col justify-between group`}
+  >
+    <div>
+      <h3 className="text-[15px] font-black text-gray-800 mb-1 uppercase">{title}</h3>
+      <p className="text-gray-600 text-xs italic">{desc}</p>
+    </div>
+    <span className="mt-4 inline-flex items-center gap-1 bg-[#047857] group-hover:bg-[#fbc02d] text-white group-hover:text-gray-900 px-4 py-1.5 rounded-full text-[11px] font-bold uppercase transition-colors w-fit">
+      Xem ngay <ChevronRight size={12} />
+    </span>
+  </Link>
 );
 
+// ── HOME PAGE ─────────────────────────────────────────────────────────────────
 export const Home = () => {
   const [categories, setCategories] = useState<any[]>([]);
   const [allProducts, setAllProducts] = useState<any[]>([]);
-  const [specialOffers, setSpecialOffers] = useState<any[]>([]); 
+  const [specialOffers, setSpecialOffers] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const addItem = useCartStore((s) => s.addItem);
   const navigate = useNavigate();
 
-  useEffect(() => {
-    const style = document.createElement('style');
-    style.innerHTML = `
-      @keyframes rainbow-btn {
-        0% { background-color: #047857; }
-        33% { background-color: #0d9488; }
-        66% { background-color: #1d4ed8; }
-        100% { background-color: #047857; }
-      }
-      .btn-rainbow {
-        animation: rainbow-btn 3s infinite linear;
-      }
-      .no-scrollbar::-webkit-scrollbar {
-        display: none;
-      }
-      .no-scrollbar {
-        -ms-overflow-style: none;
-        scrollbar-width: none;
-      }
-    `;
-    document.head.appendChild(style);
-    return () => document.head.removeChild(style);
-  }, []);
-
-  const getProductsByCategory = (catIdMatch: string, keyword: string) => {
-    return allProducts.filter(p => {
-      const pCatId = (p.category_id?._id || p.category_id || p.categoryId || "").toString();
-      const pCatName = p.category_id?.name || p.categoryId?.name || "";
-      return pCatId === catIdMatch || pCatName.toLowerCase().includes(keyword.toLowerCase());
+  const getProductsByCategory = (catIdMatch: string, keyword: string) =>
+    allProducts.filter((p) => {
+      const id = (p.category_id?._id || p.category_id || p.categoryId || "").toString();
+      const name = p.category_id?.name || p.categoryId?.name || "";
+      return id === catIdMatch || name.toLowerCase().includes(keyword.toLowerCase());
     });
-  };
 
-  // --- HÀM ADD TO CART ĐÃ SỬA LỖI GIÁ ---
   const handleAddToCart = (p: any) => {
-    // 1. Lấy giá gốc
-    const price25Raw = parseFloat(p.price_bag_25kg) || parseFloat(p.price_bag) || 0;
-    const price50Raw = parseFloat(p.price_bag_50kg) || 0;
-    const priceKgRaw  = parseFloat(p.price_kg) || 0;
-
-    // 2. Tính toán giá sau sale cho từng loại (nếu sản phẩm có gắn voucher trực tiếp)
-    const price25 = calculateSalePrice(p, price25Raw);
-    const price50 = calculateSalePrice(p, price50Raw);
-    const priceKg = calculateSalePrice(p, priceKgRaw);
-
-    const uniqueId = `${p._id}-${Date.now()}`;
-    
+    const p25r = parseFloat(p.price_bag_25kg) || parseFloat(p.price_bag) || 0;
+    const p50r = parseFloat(p.price_bag_50kg) || 0;
+    const pkr  = parseFloat(p.price_kg) || 0;
     addItem({
-      _id: uniqueId, 
-      originalId: p._id, 
-      name: p.name, 
+      _id: `${p._id}-${Date.now()}`,
+      originalId: p._id,
+      name: p.name,
       image: p.image,
-      q25: 1, 
-      p25: price25, // Giá đã sale
-      q50: 0, 
-      p50: price50, // Giá đã sale
-      qKg: 0, 
-      pKg: priceKg,  // Giá đã sale
-      itemVoucher: p.voucherInfo || null // Đính kèm info voucher vào item
+      q25: 1, p25: calculateSalePrice(p, p25r),
+      q50: 0, p50: calculateSalePrice(p, p50r),
+      qKg: 0, pKg: calculateSalePrice(p, pkr),
+      itemVoucher: p.voucherInfo || null,
     });
-
-    alert(`✅ Đã thêm ${p.name} vào giỏ hàng với giá ${price25.toLocaleString()}đ!`);
+    toast.success(`Đã thêm "${p.name}" vào giỏ hàng!`, { duration: 2500 });
   };
 
   useEffect(() => {
@@ -214,48 +239,72 @@ export const Home = () => {
         const [catData, prodData, voucherProdRes] = await Promise.all([
           categoryService.getAll(),
           productService.getAll(),
-          fetch('http://localhost:3001/api/vouchers/special-offers').then(res => res.json())
+          fetch(`${import.meta.env.VITE_API_URL || "http://localhost:3001/api"}/vouchers/special-offers`).then(r => r.json()),
         ]);
-        setCategories(catData?.data || catData || []);
+        const allCats = catData?.data || catData || [];
+        setCategories(allCats.filter((c: any) => !c.status || c.status === "active"));
         setAllProducts(prodData?.data || prodData?.products || prodData || []);
-        if (voucherProdRes.success) { setSpecialOffers(voucherProdRes.products); }
-      } catch (error) { console.error("Lỗi tải dữ liệu Home:", error); } 
-      finally { setLoading(false); }
+        if (voucherProdRes.success) setSpecialOffers(voucherProdRes.data || []);
+      } catch (e) {
+        console.error("Lỗi tải dữ liệu Home:", e);
+      } finally {
+        setLoading(false);
+      }
     };
     loadData();
   }, []);
 
-  if (loading) return <div className="min-h-screen flex items-center justify-center font-bold text-[#047857] text-lg italic">Đang tải Agri-Hub...</div>;
+  if (loading)
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center gap-3">
+        <div className="w-10 h-10 rounded-full border-4 border-[#047857] border-t-transparent animate-spin" />
+        <p className="text-sm font-bold text-[#047857] uppercase tracking-widest">Đang tải Agri-Hub...</p>
+      </div>
+    );
 
   return (
     <>
       <Header />
-      <main className="min-h-screen bg-[#f5f5f5] pb-12 font-sans text-gray-800">
-        <section className="max-w-[1200px] mx-auto px-4 mt-6">
-          <div className="w-full rounded-lg overflow-hidden shadow-sm border border-gray-200 bg-white">
+      <main className="min-h-screen bg-[#f5f5f5] pb-16 font-sans text-gray-800">
+
+        {/* BANNER */}
+        <section className="max-w-[1200px] mx-auto px-4 pt-6">
+          <div className="rounded-2xl overflow-hidden shadow-sm">
             <img src="/banner.jpg" alt="Banner" className="w-full h-auto object-cover" />
           </div>
         </section>
 
+        {/* DANH MỤC */}
         <section className="max-w-[1200px] mx-auto px-4 mt-8">
-          <div className="bg-white p-6 rounded-lg border border-gray-200 shadow-sm">
-            <h2 className="text-xl md:text-2xl font-bold text-gray-900 mb-6 uppercase">Danh mục nổi bật</h2>
-            <div className="grid grid-cols-3 md:grid-cols-6 gap-4">
+          <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm">
+            <SectionHeader title="Danh mục nổi bật" to="/products" />
+            <div className="grid grid-cols-3 md:grid-cols-6 gap-3">
               {categories.map((cat, idx) => (
-                <Link key={cat._id || idx} to={`/products?category=${cat._id}`} className="bg-white border border-gray-200 rounded-lg p-3 flex flex-col items-center hover:border-[#047857] hover:shadow-md transition cursor-pointer group">
-                  <div className="w-full aspect-square bg-gray-50 rounded-md mb-3 flex items-center justify-center overflow-hidden">
-                    <img src={cat.image?.startsWith('http') ? cat.image : `${IMAGE_CAT_URL}/${cat.image}`} alt={cat.name} className="w-full h-full object-contain p-2 mix-blend-multiply" />
+                <Link
+                  key={cat._id || idx}
+                  to={`/products?category=${cat._id}`}
+                  className="flex flex-col items-center gap-2 p-3 rounded-xl border border-gray-100 hover:border-[#047857] hover:bg-emerald-50/50 transition-all group"
+                >
+                  <div className="w-full aspect-square bg-gray-50 rounded-lg flex items-center justify-center overflow-hidden">
+                    <img
+                      src={cat.image?.startsWith("http") ? cat.image : `${IMAGE_CAT_URL}/${cat.image}`}
+                      alt={cat.name}
+                      className="w-full h-full object-contain p-2 mix-blend-multiply group-hover:scale-105 transition-transform"
+                    />
                   </div>
-                  <h3 className="text-sm font-medium text-gray-800 text-center group-hover:text-[#047857] uppercase">{cat.name}</h3>
+                  <p className="text-[11px] font-bold text-gray-700 text-center group-hover:text-[#047857] uppercase leading-tight">
+                    {cat.name}
+                  </p>
                 </Link>
               ))}
             </div>
           </div>
         </section>
 
+        {/* SẢN PHẨM MỚI NHẬP */}
         <section className="max-w-[1200px] mx-auto px-4 mt-8">
-          <div className="bg-white p-6 rounded-lg border border-gray-200 shadow-sm">
-            <h2 className="text-xl md:text-2xl font-bold mb-6 text-gray-900 uppercase">Sản phẩm mới nhập</h2>
+          <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm">
+            <SectionHeader title="Sản phẩm mới nhập" to="/products" />
             <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
               {allProducts.slice(0, 5).map((p, idx) => (
                 <ProductCard key={p._id || idx} product={p} onAdd={handleAddToCart} />
@@ -264,16 +313,25 @@ export const Home = () => {
           </div>
         </section>
 
+        {/* BÁN CHẠY NHẤT */}
         <section className="max-w-[1200px] mx-auto px-4 mt-8">
-          <div className="bg-white p-6 rounded-lg border border-gray-200 shadow-sm">
-            <div className="flex flex-col lg:flex-row gap-6">
-              <div className="lg:w-[25%] bg-[#a58641] rounded-lg p-6 text-white flex flex-col justify-center bg-gradient-to-b from-[#b39556] to-[#457c4f]">
-                <h2 className="text-2xl md:text-3xl font-bold mb-3 leading-tight uppercase">Bán chạy nhất<br />hàng ngày</h2>
-                <p className="text-sm mb-4 text-yellow-200 border-b border-white/20 pb-3 inline-block w-fit italic">Ưu đãi độc quyền - Giảm giá 20%</p>
-                <Link to="/products" className="bg-white text-gray-800 font-bold px-6 py-2 rounded-full text-sm hover:bg-[#fbc02d] hover:text-gray-900 w-fit mt-auto transition">Mua ngay</Link>
+          <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm">
+            <div className="flex flex-col lg:flex-row gap-5">
+              <div className="lg:w-[22%] bg-gradient-to-br from-[#b39556] to-[#457c4f] rounded-2xl p-6 text-white flex flex-col justify-between min-h-[200px]">
+                <div>
+                  <p className="text-[10px] font-bold uppercase tracking-widest text-yellow-200/80 mb-2">Agri-Hub</p>
+                  <h2 className="text-xl font-black leading-tight uppercase">Bán chạy nhất hàng ngày</h2>
+                  <p className="text-xs text-yellow-200 mt-2 italic">Ưu đãi độc quyền – Giảm 20%</p>
+                </div>
+                <Link
+                  to="/products"
+                  className="mt-4 bg-white text-gray-800 font-bold px-5 py-2 rounded-full text-xs hover:bg-[#fbc02d] transition w-fit flex items-center gap-1"
+                >
+                  Mua ngay <ChevronRight size={13} />
+                </Link>
               </div>
-              <div className="lg:w-[75%] grid grid-cols-2 md:grid-cols-4 gap-4">
-                {allProducts.slice(0, 4).map((p, idx) => (
+              <div className="lg:w-[78%] grid grid-cols-2 md:grid-cols-4 gap-4">
+                {allProducts.slice(0, 8).map((p, idx) => (
                   <ProductCard key={p._id || idx} product={p} onAdd={handleAddToCart} />
                 ))}
               </div>
@@ -281,66 +339,77 @@ export const Home = () => {
           </div>
         </section>
 
+        {/* PROMO BANNERS */}
         <section className="max-w-[1200px] mx-auto px-4 mt-8">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <PromoCard color="bg-[#f3deaa]" title="Thức ăn chăn nuôi" desc="Tăng trọng nhanh, nở đùi nở vai" />
-            <div className="bg-[#bce0f4] rounded-lg p-6 flex justify-between items-center min-h-[160px] border border-gray-200 shadow-sm hover:shadow-md transition">
-              <div>
-                <h3 className="text-lg font-bold text-gray-800 mb-2">Thuốc thú y</h3>
-                <p className="text-gray-700 text-sm mb-4">Đặc trị bệnh, hiệu quả cao</p>
-                <Link to="/products" className="bg-[#047857] text-white px-5 py-2 rounded text-sm font-medium hover:bg-[#fbc02d] hover:text-gray-900 transition">Xem ngay</Link>
-              </div>
-            </div>
+            <PromoCard color="bg-[#bce0f4]" title="Thuốc thú y" desc="Đặc trị bệnh, hiệu quả cao" />
             <PromoCard color="bg-[#c8e6c9]" title="Gạo & Nông sản" desc="Gạo thơm sạch, giá sỉ" />
           </div>
         </section>
 
-        {/* SECTION FLASH SALE */}
-        <section className="max-w-[1200px] mx-auto px-4 mt-8">
-          <div className="border-2 border-[#047857] rounded-3xl overflow-hidden bg-white shadow-lg">
-            <div className="bg-[#047857] p-5 flex items-center justify-between">
-              <h2 className="text-xl md:text-2xl font-black text-white italic uppercase tracking-tighter">⚡ Khuyến mãi đặc biệt - Đang diễn ra</h2>
-              <div className="hidden md:block bg-white/20 px-4 py-1 rounded-full text-white text-xs font-bold uppercase">Trượt để xem thêm ➜</div>
+        {/* FLASH SALE */}
+        {specialOffers.length > 0 && (
+          <section className="max-w-[1200px] mx-auto px-4 mt-8">
+            <div className="rounded-2xl overflow-hidden border-2 border-red-500 shadow-lg bg-white">
+              <div className="bg-gradient-to-r from-red-600 to-red-500 px-6 py-4 flex items-center justify-between">
+                <h2 className="text-lg font-black text-white uppercase flex items-center gap-2">
+                  <Zap size={20} className="text-yellow-300" /> Khuyến mãi đặc biệt
+                </h2>
+                <span className="hidden md:block bg-white/20 text-white text-[10px] font-bold px-3 py-1 rounded-full uppercase">
+                  Trượt để xem thêm →
+                </span>
+              </div>
+              <div className="p-5 flex gap-4 overflow-x-auto no-scrollbar">
+                {specialOffers.map((p, idx) => (
+                  <FlashSaleCard key={p._id || idx} product={p} onAdd={handleAddToCart} />
+                ))}
+              </div>
             </div>
-            
-            <div className="p-4 md:p-8 bg-gray-50/50 flex flex-nowrap overflow-x-auto gap-6 no-scrollbar">
-              {specialOffers.length > 0 ? (
-                  specialOffers.map((p, idx) => (
-                    <FlashSaleCard key={p._id || idx} product={p} onAdd={handleAddToCart} />
-                  ))
-              ) : (
-                  <div className="w-full py-16 text-center text-gray-400 italic flex-shrink-0">
-                      <p className="text-lg mb-2">Agri-Hub đang chuẩn bị các mã giảm giá mới...</p>
-                      <p className="text-sm">Quay lại sau ít phút để nhận ưu đãi!</p>
-                  </div>
-              )}
+          </section>
+        )}
+
+        {/* DANH MỤC SẢN PHẨM */}
+        <section className="max-w-[1200px] mx-auto px-4 mt-8">
+          <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm">
+            <div className="flex flex-col lg:flex-row gap-5">
+              <div className="lg:w-[75%]">
+                <SectionHeader title="Thức ăn chăn nuôi" to="/products" />
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                  {getProductsByCategory("69a0242a6b300918076f1657", "Thức ăn cho Heo")
+                    .slice(0, 8)
+                    .map((p, idx) => (
+                      <ProductCard key={p._id || idx} product={p} onAdd={handleAddToCart} />
+                    ))}
+                </div>
+              </div>
+              <div className="lg:w-[25%] bg-gradient-to-b from-[#6a7f45] to-[#3d5a27] rounded-2xl p-6 text-white flex flex-col items-center text-center justify-between">
+                <div>
+                  <h3 className="text-lg font-black uppercase mt-2">Sản phẩm nổi bật</h3>
+                  <p className="text-xs mt-2 text-green-200 italic">Mua sắm thoải mái chỉ từ 200,000đ</p>
+                </div>
+                <div className="w-full h-32 bg-white/10 rounded-xl flex items-center justify-center border border-white/20 my-5">
+                  <span className="text-[10px] font-black text-white/60 uppercase tracking-widest">Agri-Hub</span>
+                </div>
+                <Link
+                  to="/products"
+                  className="bg-white text-gray-800 px-6 py-2 rounded-full text-xs font-black uppercase hover:bg-[#fbc02d] transition flex items-center gap-1"
+                >
+                  Mua ngay <ChevronRight size={13} />
+                </Link>
+              </div>
+            </div>
+            <div className="flex justify-center mt-8">
+              <button
+                onClick={() => navigate("/products")}
+                className="border-2 border-[#047857] text-[#047857] px-10 py-2.5 rounded-full text-sm font-bold uppercase hover:bg-[#047857] hover:text-white transition-all"
+              >
+                Xem tất cả sản phẩm
+              </button>
             </div>
           </div>
         </section>
 
-        <section className="max-w-[1200px] mx-auto px-4 mt-8">
-          <div className="bg-white p-6 rounded-lg border border-gray-200 shadow-sm">
-            <div className="flex flex-col lg:flex-row gap-6">
-              <div className="lg:w-[75%]">
-                <h2 className="text-xl font-bold mb-6 text-gray-800 border-b border-gray-100 pb-2 inline-block border-b-2 border-yellow-400 uppercase">Cám Heo / Cám Bò / Cám Gà</h2>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                  {getProductsByCategory("1", "Heo").slice(0, 8).map((p, idx) => (
-                    <ProductCard key={p._id || idx} product={p} onAdd={handleAddToCart} />
-                  ))}
-                </div>
-              </div>
-              <div className="lg:w-[25%] bg-[#6a7f45] rounded-lg p-6 text-white flex flex-col items-center text-center">
-                 <h3 className="text-2xl font-bold mb-3 mt-4 uppercase">Sản phẩm nổi bật</h3>
-                 <p className="text-sm mb-8 opacity-90 italic">Mua sắm thoải mái chỉ từ 200.000đ</p>
-                 <Link to="/products" className="bg-white text-gray-800 px-8 py-2 rounded-full text-sm font-bold w-fit hover:bg-[#fbc02d] transition mb-10">Mua ngay</Link>
-                 <div className="w-full h-48 bg-white/10 rounded-md flex items-center justify-center font-bold text-sm border border-white/20">AGRI-HUB CHẤT LƯỢNG CAO</div>
-              </div>
-            </div>
-            <div className="flex justify-center mt-6">
-              <button onClick={() => navigate('/products')} className="border border-[#047857] text-[#047857] px-8 py-2 rounded-full text-sm font-bold uppercase hover:bg-[#fbc02d] hover:text-gray-900 hover:border-[#fbc02d] transition-all">Xem tất cả sản phẩm</button>
-            </div>
-          </div>
-        </section>
       </main>
       <Footer />
     </>

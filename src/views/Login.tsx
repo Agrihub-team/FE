@@ -11,6 +11,8 @@ import { Header } from "../components/Header";
 import { Footer } from "../components/Footer";
 import { authService } from "../controllers/authService";
 import { useAuthStore } from "../store/authStore";
+import { useCartStore } from "../store/cartStore";
+import { apiClient } from "../utils/api";
 
 const loginSchema = z.object({
   email: z
@@ -75,7 +77,7 @@ export const Login = () => {
     mode: "onChange",
   });
 
-  const saveLogin = (res: any) => {
+  const saveLogin = async (res: any) => {
     const responseData = res?.data || res;
     const userData = responseData?.user || responseData?.data?.user;
     const tokenData = responseData?.token || responseData?.data?.token;
@@ -84,12 +86,18 @@ export const Login = () => {
       throw new Error("Dữ liệu tài khoản bị thiếu!");
     }
 
+    // Lưu token trước để apiClient có thể dùng ngay
     localStorage.setItem("token", tokenData);
     localStorage.setItem("user", JSON.stringify(userData));
+
+    // Merge giỏ hàng local (chưa đăng nhập) lên server
+    const localItems = useCartStore.getState().items;
+    if (localItems.length > 0) {
+      await apiClient.post("/cart/sync", { items: localItems }).catch(() => {});
+    }
+
     loginAction(userData, tokenData);
-
     toast.success("Đăng nhập thành công!");
-
     navigate(userData.role?.toUpperCase() === "ADMIN" ? "/admin" : "/");
   };
 

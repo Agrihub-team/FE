@@ -8,19 +8,22 @@ interface AuthState {
 }
 
 export const useAuthStore = create<AuthState>((set) => ({
-  // Khởi tạo state từ localStorage
   user: JSON.parse(localStorage.getItem('user') || 'null') as User | null,
-  
-  login: (user: User, token: string) => { 
-    // Lưu token với key thống nhất là 'token'
-    localStorage.setItem('token', token); 
+
+  login: (user: User, token: string) => {
+    localStorage.setItem('token', token);
     localStorage.setItem('user', JSON.stringify(user));
     set({ user });
   },
-  
+
   logout: () => {
     localStorage.removeItem('token');
     localStorage.removeItem('user');
     set({ user: null });
+
+    // Xóa giỏ hàng khi logout để tránh lộ dữ liệu sang user khác
+    import('./cartStore').then(({ useCartStore }) => {
+      useCartStore.getState().clearCart();
+    });
   }
 }));

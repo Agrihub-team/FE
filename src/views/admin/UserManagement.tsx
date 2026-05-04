@@ -8,6 +8,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { apiClient } from "../../utils/api";
+import { IMAGE_URL } from '../../utils/config';
 
 export const UserManagement = () => {
   const [users, setUsers] = useState<any[]>([]);
@@ -529,7 +530,7 @@ export const UserManagement = () => {
                                  <td className="px-5 py-4">
                                    <div className="flex items-center gap-4">
                                      <div className="w-14 h-14 border border-gray-200 rounded-lg bg-white overflow-hidden shrink-0 shadow-sm">
-                                        <img src={`http://localhost:3001/images/products/${item.image || item.product?.image}`} className="w-full h-full object-contain" alt={item.name} onError={e=>e.target.src='https://via.placeholder.com/60'} />
+                                        <img src={`${IMAGE_URL}/${item.image || item.product?.image}`} className="w-full h-full object-contain" alt={item.name} onError={e=>e.target.src='https://via.placeholder.com/60'} />
                                      </div>
                                      <div>
                                        <p className="text-sm font-bold text-gray-900 line-clamp-2">{item.name || item.product?.name}</p>

@@ -28,10 +28,10 @@ export const VoucherManagement = () => {
     const fetchData = async () => {
         try {
             const [vRes, pRes] = await Promise.all([
-                fetch('http://localhost:3001/api/vouchers', {
+                fetch(import.meta.env.VITE_API_URL + '/vouchers' || 'http://localhost:3001/api/vouchers', {
                     headers: { 'Authorization': `Bearer ${token}` }
                 }),
-                fetch('http://localhost:3001/api/products') 
+                fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3001/api'}/products`) 
             ]);
             
             const vData = await vRes.json();
@@ -60,7 +60,7 @@ export const VoucherManagement = () => {
     const handleDelete = async (id) => {
         if(!window.confirm("Bạn có chắc chắn muốn xóa voucher này không?")) return;
         try {
-            const res = await fetch(`http://localhost:3001/api/vouchers/${id}`, {
+            const res = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3001/api'}/vouchers/${id}`, {
                 method: 'DELETE',
                 headers: { 'Authorization': `Bearer ${token}` }
             });
@@ -84,7 +84,7 @@ export const VoucherManagement = () => {
         }
 
         try {
-            const res = await fetch('http://localhost:3001/api/vouchers', {
+            const res = await fetch(import.meta.env.VITE_API_URL + '/vouchers' || 'http://localhost:3001/api/vouchers', {
                 method: 'POST',
                 headers: { 
                     'Content-Type': 'application/json',

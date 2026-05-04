@@ -1,31 +1,24 @@
 import { Link } from "react-router-dom";
 import { useCartStore } from "../store/cartStore";
+import { toast } from "sonner";
+import { IMAGE_URL } from '../utils/config';
 
 export const ProductCard = ({ p }: { p: any }) => {
   const addItem = useCartStore((state) => state.addItem);
 
   const handleAddToCart = (e: React.MouseEvent) => {
     e.preventDefault();
-
     const price25 = parseFloat(p.price_bag_25kg) || parseFloat(p.price_bag) || 0;
-
-    // Tạo ID duy nhất mỗi lần thêm để không gộp
-    const uniqueId = `${p._id}-${Date.now()}`;
-
     addItem({
-      _id: uniqueId,
+      _id: `${p._id}-${Date.now()}`,
       originalId: p._id,
       name: p.name,
       image: p.image,
-      q25: 1,                    
-      p25: price25,
-      q50: 0,
-      p50: 0,
-      qKg: 0,
-      pKg: 0
+      q25: 1, p25: price25,
+      q50: 0, p50: 0,
+      qKg: 0, pKg: 0,
     });
-
-    alert(`✅ Đã thêm ${p.name} (1 bao 25kg) vào giỏ hàng!`);
+    toast.success(`Đã thêm "${p.name}" vào giỏ hàng!`, { duration: 2500 });
   };
 
   const price = parseFloat(p.price_bag_25kg) || parseFloat(p.price_bag) || 0;
@@ -33,15 +26,20 @@ export const ProductCard = ({ p }: { p: any }) => {
   return (
     <div className="bg-white border border-gray-100 rounded-3xl p-5 hover:border-emerald-500 hover:shadow-2xl transition-all group flex flex-col h-full">
       <Link to={`/products/${p._id}`} className="flex-1">
-        <div className="h-52 flex items-center justify-center overflow-hidden rounded-2xl mb-5 bg-gray-50">
-          <img 
-            src={`http://localhost:3001/images/products/${p.image}`} 
-            className="max-h-full object-contain group-hover:scale-110 transition-transform" 
+        <div className="h-52 w-full flex items-center justify-center overflow-hidden rounded-2xl mb-5 bg-gray-50">
+          <img
+            src={`${IMAGE_URL}/${p.image}`}
+            className="h-full w-full object-contain group-hover:scale-110 transition-transform"
             alt={p.name}
-            onError={(e) => { (e.target as HTMLImageElement).src = 'https://via.placeholder.com/150?text=No+Image'; }}
+            onError={(e) => {
+              (e.target as HTMLImageElement).src =
+                "https://via.placeholder.com/150?text=No+Image";
+            }}
           />
         </div>
-        <h3 className="font-bold text-base text-gray-800 line-clamp-2 mb-3">{p.name}</h3>
+        <h3 className="font-bold text-base text-gray-800 line-clamp-2 mb-3">
+          {p.name}
+        </h3>
         <p className="text-2xl font-black text-emerald-600">
           {price.toLocaleString()}đ
         </p>

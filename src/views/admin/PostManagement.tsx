@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { Sidebar } from '../../components/Sidebar';
 import { Post } from '../../models/post';
 import { postService } from '../../controllers/postService';
+import { toast } from 'sonner';
 
 export const PostManagement = () => {
   const [posts, setPosts] = useState<Post[]>([]);
@@ -30,12 +31,12 @@ export const PostManagement = () => {
     e.preventDefault();
     try {
       await postService.create(formData);
-      alert('Tạo bài viết thành công!');
+      toast.success('Tạo bài viết thành công!');
       setFormData({ title: '', content: '', category: '', status: 'draft' });
       setShowForm(false);
       fetchPosts();
     } catch (error) {
-      alert('Lỗi khi tạo bài viết');
+      toast.error('Lỗi khi tạo bài viết');
     }
   };
 
@@ -43,10 +44,10 @@ export const PostManagement = () => {
     if (confirm('Bạn chắc chắn muốn xóa?')) {
       try {
         await postService.delete(id);
-        alert('Xóa thành công!');
+        toast.success('Xóa thành công!');
         fetchPosts();
       } catch (error) {
-        alert('Lỗi khi xóa');
+        toast.error('Lỗi khi xóa');
       }
     }
   };

@@ -4,6 +4,8 @@ import { Header } from "../components/Header";
 import { Footer } from "../components/Footer";
 import { productService } from "../controllers/productService";
 import { useCartStore } from "../store/cartStore";
+import { toast } from "sonner";
+import { IMAGE_URL } from '../utils/config';
 
 export const ProductDetail = () => {
   const { id } = useParams();
@@ -29,7 +31,7 @@ export const ProductDetail = () => {
         <div className="md:w-1/2 border-4 border-dashed border-[#047857]/10 rounded-[50px] p-12 flex justify-center bg-gray-50 overflow-hidden relative group">
           <div className="absolute top-8 left-8 bg-[#facc15] text-gray-900 font-black px-4 py-2 rounded-2xl text-[10px] uppercase tracking-widest shadow-lg z-10">Sản phẩm uy tín</div>
           <img 
-            src={`http://localhost:3001/images/products/${p.image}`} 
+            src={`${IMAGE_URL}/${p.image}`} 
             className="max-h-[450px] object-contain group-hover:scale-110 transition duration-700" 
             alt={p.name} 
           />
@@ -57,9 +59,9 @@ export const ProductDetail = () => {
             </div>
             
             <button 
-              onClick={() => { 
-                addItem({ ...p, price: currentPrice, quantity: qty, unit, _id: `${p._id}-${unit}` }); 
-                alert(`Đã thêm ${qty} ${unit === 'bag' ? 'bao' : 'ký'} vào giỏ hàng!`); 
+              onClick={() => {
+                addItem({ ...p, price: currentPrice, quantity: qty, unit, _id: `${p._id}-${unit}` });
+                toast.success(`Đã thêm "${p.name}" vào giỏ hàng!`, { duration: 2500 });
               }} 
               className="flex-1 bg-[#047857] text-white py-5 rounded-full font-black text-xl uppercase shadow-2xl hover:bg-black transition-all transform active:scale-95"
             >

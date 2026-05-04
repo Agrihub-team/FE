@@ -4,9 +4,9 @@ import { Pencil, Eye, EyeOff, Plus, X, Search, Info, Package, Landmark, CheckCir
 import { toast } from "sonner";
 import { apiClient } from "../../utils/api";
 import { useSearchParams } from "react-router-dom";
+import { IMAGE_URL } from '../../utils/config';
 
 
-const IMAGE_URL = 'http://localhost:3001/images/products';
 
 export const ProductManagement = () => {
 

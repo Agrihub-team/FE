@@ -1,16 +1,26 @@
 // @ts-nocheck
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useState, useMemo, useRef } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { toast } from "sonner";
-import { 
-  User, LogOut, Settings, MapPin, ChevronRight, FileText, 
-  Store, X, Calendar, CreditCard, Tag, Edit2, Check, XCircle, NotebookPen, CheckCircle2
+import {
+  User, LogOut, Settings, MapPin, ChevronRight, FileText,
+  Store, X, Calendar, CreditCard, Tag, Edit2, Check, XCircle, NotebookPen, CheckCircle2, RefreshCw
 } from "lucide-react";
 
 import { Header } from "../components/Header";
 import { Footer } from "../components/Footer";
 import { apiClient } from "../utils/api";
-import { AGRI_LOCATIONS } from "../utils/locations"; 
+import { AGRI_LOCATIONS } from "../utils/locations";
+import { IMAGE_URL } from '../utils/config';
+
+const STATUS_MAP: Record<string, { label: string; cls: string; dot: string; badgeCls: string }> = {
+  pending:   { label: "Chờ xác nhận",   cls: "bg-yellow-50 text-yellow-700 border-yellow-200",   dot: "bg-yellow-400",  badgeCls: "bg-yellow-100 text-yellow-700" },
+  confirmed: { label: "Đã duyệt",       cls: "bg-blue-50 text-blue-700 border-blue-200",         dot: "bg-blue-400",    badgeCls: "bg-blue-100 text-blue-700" },
+  preparing: { label: "Đang chuẩn bị",  cls: "bg-orange-50 text-orange-700 border-orange-200",   dot: "bg-orange-400",  badgeCls: "bg-orange-100 text-orange-700" },
+  shipped:   { label: "Đang giao hàng", cls: "bg-sky-50 text-sky-700 border-sky-200",            dot: "bg-sky-400",     badgeCls: "bg-sky-100 text-sky-700" },
+  delivered: { label: "Đã giao",        cls: "bg-emerald-50 text-emerald-700 border-emerald-200", dot: "bg-emerald-500", badgeCls: "bg-emerald-100 text-emerald-700" },
+  cancelled: { label: "Đã hủy",         cls: "bg-red-50 text-red-600 border-red-200",            dot: "bg-red-400",     badgeCls: "bg-red-100 text-red-600" },
+};
 
 export const Profile = () => {
   const navigate = useNavigate();
@@ -64,10 +74,9 @@ export const Profile = () => {
           if (defaultAddr) setDefaultAddressId(defaultAddr._id);
         }
 
-        const orderRes = await apiClient.get("/orders");
-        const allOrders = orderRes?.data || orderRes || [];
-        const myOrders = allOrders.filter((o: any) => o.user?._id === currentUserId || o.user === currentUserId);
-        myOrders.sort((a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+        const orderRes = await apiClient.get("/orders/my");
+        const myOrders: any[] = Array.isArray(orderRes) ? orderRes : orderRes?.data || [];
+        myOrders.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
         setOrders(myOrders);
 
       } catch (error) {
@@ -157,26 +166,66 @@ export const Profile = () => {
     setIsModalOpen(true);
   };
 
-  // 🚀 ĐÃ FIX: Logic lọc chuẩn theo Enum trong Schema Mongoose
+  // --- polling: re-fetch orders every 30s and toast on status change ---
+  const prevStatusesRef = useRef<Record<string, string>>({});
+  const [lastRefreshed, setLastRefreshed] = useState<Date | null>(null);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+
+  const refreshOrders = async (silent = true) => {
+    if (!currentUserId) return;
+    if (!silent) setIsRefreshing(true);
+    try {
+      const orderRes = await apiClient.get("/orders/my");
+      const latest: any[] = Array.isArray(orderRes) ? orderRes : (orderRes?.data || []);
+      latest.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+
+      const prev = prevStatusesRef.current;
+      latest.forEach((o) => {
+        if (prev[o._id] && prev[o._id] !== o.status) {
+          const s = STATUS_MAP[o.status];
+          toast.info(`Đơn #${o.orderCode} → ${s?.label || o.status}`, {
+            description: "Trạng thái đơn hàng vừa được cập nhật",
+            duration: 6000,
+          });
+        }
+      });
+      const newMap: Record<string, string> = {};
+      latest.forEach((o) => { newMap[o._id] = o.status; });
+      prevStatusesRef.current = newMap;
+
+      setOrders(latest);
+      setLastRefreshed(new Date());
+    } catch (_) {}
+    finally { if (!silent) setIsRefreshing(false); }
+  };
+
+  const seededRef = useRef(false);
+  useEffect(() => {
+    if (!currentUserId || orders.length === 0 || seededRef.current) return;
+    seededRef.current = true;
+    const seed: Record<string, string> = {};
+    orders.forEach((o: any) => { seed[o._id] = o.status; });
+    prevStatusesRef.current = seed;
+    setLastRefreshed(new Date());
+  }, [orders]);
+
+  useEffect(() => {
+    if (!currentUserId) return;
+    const id = setInterval(() => refreshOrders(true), 30_000);
+    return () => clearInterval(id);
+  }, [currentUserId]);
+
+  const statusCounts = useMemo(() =>
+    orders.reduce((acc: Record<string, number>, o: any) => {
+      acc[o.status] = (acc[o.status] || 0) + 1;
+      return acc;
+    }, {}),
+  [orders]);
+
   const filteredOrders = orders.filter((o: any) => {
     if (orderFilter === "all") return true;
-    if (orderFilter === "preparing") return o.status === "pending" || o.status === "confirmed" || o.status === "preparing";
-    if (orderFilter === "shipping") return o.status === "shipped";
-    if (orderFilter === "completed") return o.status === "delivered";
-    if (orderFilter === "cancelled") return o.status === "cancelled";
-    return true;
+    return o.status === orderFilter;
   });
-
-  // 🚀 ĐÃ FIX: Logic hiển thị màu sắc và text chuẩn theo Schema
-  const getStatusDisplay = (order: any) => {
-    const { status } = order;
-    if (status === 'cancelled') return { text: "ĐÃ HỦY", color: "text-red-500" };
-    if (status === 'delivered') return { text: "HOÀN THÀNH", color: "text-[#047857]" };
-    if (status === 'shipped') return { text: "ĐANG GIAO HÀNG", color: "text-blue-500" };
-    if (status === 'pending' || status === 'confirmed' || status === 'preparing') 
-      return { text: "SHOP ĐANG CHUẨN BỊ", color: "text-orange-500" };
-    return { text: status?.toUpperCase(), color: "text-slate-500" };
-  };
 
   const getOrderVoucherInfo = (order: any) => {
     if (!order) return { totalDiscount: 0, codes: "" };
@@ -240,7 +289,7 @@ export const Profile = () => {
                 <FileText size={18} className={activeMenu === 'orders' ? 'text-[#047857]' : 'text-orange-500'} /> Đơn Mua
               </button>
 
-              {userRole === 'admin' && (
+              {userRole === 'ADMIN' && (
                 <Link to="/admin" className="w-full flex items-center gap-3 px-4 py-2.5 rounded-sm text-sm font-medium text-slate-700 hover:text-[#047857] transition-colors">
                   <Settings size={18} className="text-slate-600" /> Quản lý Admin
                 </Link>
@@ -257,22 +306,50 @@ export const Profile = () => {
             
             {activeMenu === 'orders' && (
               <>
-                <div className="bg-white flex overflow-x-auto shadow-sm sticky top-0 z-10">
-                  {[
-                    { id: 'all', label: 'Tất cả' },
-                    { id: 'preparing', label: 'Chờ xử lý' },
-                    { id: 'shipping', label: 'Đang giao' },
-                    { id: 'completed', label: 'Hoàn thành' },
-                    { id: 'cancelled', label: 'Đã hủy' },
-                  ].map(tab => (
+                <div className="bg-white shadow-sm">
+                  {/* Tab bar */}
+                  <div className="flex overflow-x-auto border-b border-slate-100">
+                    {[
+                      { id: 'all',       label: 'Tất cả' },
+                      { id: 'pending',   label: 'Chờ xác nhận' },
+                      { id: 'confirmed', label: 'Đã duyệt' },
+                      { id: 'preparing', label: 'Đang chuẩn bị' },
+                      { id: 'shipped',   label: 'Đang giao' },
+                      { id: 'delivered', label: 'Đã giao' },
+                      { id: 'cancelled', label: 'Đã hủy' },
+                    ].map(tab => {
+                      const count = tab.id === 'all' ? orders.length : (statusCounts[tab.id] || 0);
+                      const sm = STATUS_MAP[tab.id];
+                      return (
+                        <button
+                          key={tab.id}
+                          onClick={() => setOrderFilter(tab.id)}
+                          className={`flex-shrink-0 flex items-center gap-1.5 py-3.5 text-sm font-medium whitespace-nowrap px-4 border-b-2 transition-colors ${orderFilter === tab.id ? 'border-[#047857] text-[#047857]' : 'border-transparent text-slate-500 hover:text-[#047857]'}`}
+                        >
+                          {tab.label}
+                          {count > 0 && (
+                            <span className={`text-[11px] font-bold px-1.5 py-0.5 rounded-full leading-none ${orderFilter === tab.id ? 'bg-emerald-100 text-[#047857]' : (sm?.badgeCls || 'bg-slate-100 text-slate-500')}`}>
+                              {count}
+                            </span>
+                          )}
+                        </button>
+                      );
+                    })}
+                  </div>
+                  {/* Refresh bar */}
+                  <div className="flex items-center justify-between px-4 py-2 bg-slate-50/70 border-b border-slate-100">
+                    <p className="text-[11px] text-slate-400">
+                      {lastRefreshed ? `Cập nhật lúc ${lastRefreshed.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}` : 'Đang tải...'}
+                    </p>
                     <button
-                      key={tab.id}
-                      onClick={() => setOrderFilter(tab.id)}
-                      className={`flex-1 py-4 text-sm font-medium whitespace-nowrap px-4 border-b-2 transition-colors ${orderFilter === tab.id ? 'border-[#047857] text-[#047857]' : 'border-transparent text-slate-600 hover:text-[#047857]'}`}
+                      onClick={() => refreshOrders(false)}
+                      disabled={isRefreshing}
+                      className="flex items-center gap-1.5 text-[11px] font-semibold text-[#047857] hover:text-[#035b42] disabled:opacity-40 transition-colors"
                     >
-                      {tab.label}
+                      <RefreshCw size={12} className={isRefreshing ? 'animate-spin' : ''} />
+                      Làm mới
                     </button>
-                  ))}
+                  </div>
                 </div>
 
                 {loading ? (
@@ -285,77 +362,102 @@ export const Profile = () => {
                     <p className="text-slate-500 text-sm">Chưa có đơn hàng trong mục này</p>
                   </div>
                 ) : (
-                  <div className="space-y-3">
+                  <div className="space-y-4">
                     {filteredOrders.map((order: any) => {
-                      const displayStatus = getStatusDisplay(order);
+                      const statusInfo = STATUS_MAP[order.status] ?? { label: order.status, cls: "bg-slate-50 text-slate-600 border-slate-200", dot: "bg-slate-400", badgeCls: "bg-slate-100 text-slate-500" };
                       const voucherInfo = getOrderVoucherInfo(order);
                       const isPaid = order.paymentStatus === 'paid';
-                      
+
                       return (
-                        <div key={order._id} className="bg-white shadow-sm">
-                          <div className="px-6 py-3 border-b border-slate-100 flex justify-between items-center">
-                            <div className="flex items-center gap-2">
-                              <Store size={14} className="text-slate-600"/>
-                              <span className="text-sm font-bold text-slate-800">Agri-Hub Official</span>
+                        <div key={order._id} className="bg-white shadow-sm rounded-lg overflow-hidden border border-slate-100">
+
+                          {/* Card header */}
+                          <div className="px-5 py-3.5 bg-slate-50 border-b border-slate-100 flex justify-between items-center">
+                            <div className="flex items-center gap-2.5">
+                              <Store size={15} className="text-slate-500"/>
+                              <span className="text-sm font-bold text-slate-700">Agri-Hub Official</span>
+                              <span className="text-slate-300">|</span>
+                              <span className="text-xs text-slate-400 font-medium flex items-center gap-1">
+                                <Calendar size={11}/> {new Date(order.createdAt).toLocaleDateString('vi-VN')}
+                              </span>
                             </div>
-                            <div className="flex items-center gap-2 text-sm">
-                              {isPaid && <span className="text-emerald-600 font-bold bg-emerald-50 px-2 py-0.5 rounded text-[10px] flex items-center gap-1 border border-emerald-100"><CheckCircle2 size={10}/> ĐÃ THANH TOÁN</span>}
-                              <span className={`font-medium ${displayStatus.color} uppercase`}>{displayStatus.text}</span>
+                            <div className="flex items-center gap-2">
+                              {isPaid && (
+                                <span className="text-emerald-600 font-bold bg-emerald-50 px-2 py-1 rounded-full text-[10px] flex items-center gap-1 border border-emerald-100">
+                                  <CheckCircle2 size={11}/> ĐÃ THANH TOÁN
+                                </span>
+                              )}
+                              <span className={`inline-flex items-center gap-1.5 text-xs font-bold px-3 py-1.5 rounded-full border ${statusInfo.cls}`}>
+                                <span className={`w-2 h-2 rounded-full shrink-0 ${statusInfo.dot}`}></span>
+                                {statusInfo.label}
+                              </span>
                             </div>
                           </div>
 
-                          <div className="px-6 py-4 border-b border-slate-50 cursor-pointer hover:bg-slate-50/50" onClick={() => openOrderModal(order)}>
+                          {/* Items */}
+                          <div className="px-5 py-5 border-b border-slate-100 cursor-pointer hover:bg-slate-50/60 transition-colors" onClick={() => openOrderModal(order)}>
                             {order.items?.map((item: any, idx: number) => {
                               const rawPrice = (Number(item.q25)*Number(item.p25)) + (Number(item.q50)*Number(item.p50)) + (Number(item.qKg)*Number(item.pKg));
                               const itemV = item.itemVoucher;
                               const itemDiscount = itemV ? (itemV.discount || 0) : 0;
-                              
+                              const qty = Number(item.q25) + Number(item.q50) + Number(item.qKg);
+                              const specs = [item.q25 > 0 && `${item.q25} bao 25kg`, item.q50 > 0 && `${item.q50} bao 50kg`, item.qKg > 0 && `${item.qKg} ký`].filter(Boolean).join(" · ");
+
                               return (
-                                <div key={idx} className="flex gap-3 mb-4 last:mb-0">
-                                  <div className="w-20 h-20 border border-slate-200 shrink-0 bg-white flex items-center justify-center overflow-hidden">
-                                    <img 
-                                      src={`http://localhost:3001/images/products/${item.image}`} 
-                                      className="w-full h-full object-contain p-1" 
-                                      onError={(e) => { (e.target as HTMLImageElement).src = 'https://via.placeholder.com/80?text=No+Image'; }} 
+                                <div key={idx} className="flex gap-4 mb-5 last:mb-0">
+                                  <div className="w-24 h-24 border border-slate-200 rounded-lg shrink-0 bg-white flex items-center justify-center overflow-hidden">
+                                    <img
+                                      src={`${IMAGE_URL}/${item.image}`}
+                                      className="w-full h-full object-contain p-1.5"
+                                      onError={(e) => { (e.target as HTMLImageElement).src = 'https://via.placeholder.com/96?text=?'; }}
                                     />
                                   </div>
-                                  <div className="flex-1">
-                                    <p className="text-sm text-slate-800 line-clamp-2 font-medium">{item.name}</p>
-                                    <div className="text-xs text-slate-500 mt-1">
-                                      Phân loại: {item.q25 > 0 ? '25kg ' : ''}{item.q50 > 0 ? '50kg ' : ''}{item.qKg > 0 ? 'Ký' : ''}
+                                  <div className="flex-1 min-w-0">
+                                    <p className="text-base text-slate-800 font-semibold line-clamp-2 leading-snug">{item.name}</p>
+                                    <p className="text-sm text-slate-500 mt-1">{specs || "—"}</p>
+                                    <div className="flex items-center gap-2 mt-1.5">
+                                      <span className="text-xs font-bold text-slate-400 bg-slate-100 px-2 py-0.5 rounded-full">x{qty} sản phẩm</span>
+                                      {itemDiscount > 0 && itemV?.code && (
+                                        <span className="text-[10px] text-yellow-600 bg-yellow-50 px-2 py-0.5 rounded-full font-bold border border-yellow-100 flex items-center gap-1">
+                                          <Tag size={9}/> {itemV.code}: -{itemDiscount.toLocaleString()}đ
+                                        </span>
+                                      )}
                                     </div>
-                                    {itemDiscount > 0 && itemV.code && (
-                                      <div className="mt-1 flex items-center gap-1 w-fit text-[9px] text-yellow-600 bg-yellow-50 px-1.5 py-0.5 rounded font-bold uppercase border border-yellow-100">
-                                        <Tag size={10} /> Mã {itemV.code}: -{itemDiscount.toLocaleString()}đ
-                                      </div>
-                                    )}
                                   </div>
-                                  <div className="text-right">
-                                    {itemDiscount > 0 && <p className="text-[10px] text-slate-400 line-through mb-0.5">{(rawPrice || 0).toLocaleString()}đ</p>}
-                                    <span className="text-sm text-slate-800 font-bold">{(rawPrice - itemDiscount).toLocaleString()}đ</span>
+                                  <div className="text-right shrink-0">
+                                    {itemDiscount > 0 && (
+                                      <p className="text-xs text-slate-300 line-through mb-0.5">{(rawPrice || 0).toLocaleString()}đ</p>
+                                    )}
+                                    <span className="text-base text-slate-800 font-bold">{(rawPrice - itemDiscount).toLocaleString()}đ</span>
                                   </div>
                                 </div>
                               );
                             })}
                           </div>
 
-                          <div className="px-6 py-4 bg-slate-50/50 flex flex-col md:flex-row justify-between items-end md:items-center gap-4">
-                            <div className="flex flex-col gap-1">
-                               <div className="text-xs text-slate-500">Mã đơn: #{order.orderCode}</div>
-                               {order.orderNotes && <div className="text-[10px] text-orange-500 font-medium italic flex items-center gap-1"><NotebookPen size={10}/> {order.orderNotes}</div>}
-                            </div>
-                            <div className="flex flex-col items-end gap-2">
-                              {voucherInfo.totalDiscount > 0 && (
-                                <div className="text-[11px] font-bold text-emerald-600 bg-emerald-50 px-2 py-1 rounded flex items-center gap-1">
-                                  <Tag size={12} /> Đã giảm: -{voucherInfo.totalDiscount.toLocaleString()}đ
-                                </div>
+                          {/* Card footer */}
+                          <div className="px-5 py-4 flex flex-col md:flex-row justify-between items-start md:items-center gap-3">
+                            <div>
+                              <p className="text-sm font-semibold text-slate-500">Mã đơn: <span className="text-slate-700">#{order.orderCode}</span></p>
+                              {order.orderNotes && (
+                                <p className="text-xs text-orange-500 italic mt-1 flex items-center gap-1"><NotebookPen size={11}/> {order.orderNotes}</p>
                               )}
-                              <div className="text-sm text-slate-800 flex items-center gap-2">
-                                <span>Thành tiền:</span>
-                                <span className="text-xl font-bold text-[#047857]">{(order.totalAmount || 0).toLocaleString()}đ</span>
+                            </div>
+                            <div className="flex items-center gap-4">
+                              {voucherInfo.totalDiscount > 0 && (
+                                <span className="text-sm font-bold text-emerald-600 bg-emerald-50 px-3 py-1.5 rounded-full flex items-center gap-1 border border-emerald-100">
+                                  <Tag size={13}/> -{voucherInfo.totalDiscount.toLocaleString()}đ
+                                </span>
+                              )}
+                              <div className="text-right">
+                                <p className="text-xs text-slate-400 font-medium">Thành tiền</p>
+                                <p className="text-2xl font-black text-[#047857] leading-tight">{(order.totalAmount || 0).toLocaleString()}đ</p>
                               </div>
-                              <button onClick={() => openOrderModal(order)} className="px-6 py-2 bg-white border border-slate-300 text-slate-700 text-sm font-medium rounded hover:bg-slate-50 transition-colors">
-                                Xem chi tiết
+                              <button
+                                onClick={() => openOrderModal(order)}
+                                className="px-5 py-2.5 bg-white border-2 border-slate-200 text-slate-700 text-sm font-semibold rounded-lg hover:border-[#047857] hover:text-[#047857] transition-colors"
+                              >
+                                Chi tiết
                               </button>
                             </div>
                           </div>
@@ -374,81 +476,154 @@ export const Profile = () => {
                     <h2 className="text-lg font-medium text-slate-800">Hồ sơ của tôi</h2>
                     <p className="text-sm text-slate-500 mt-1">Quản lý thông tin cá nhân</p>
                   </div>
-                  {!isEditingProfile ? (
+                  {!isEditingProfile && (
                     <button onClick={() => setIsEditingProfile(true)} className="flex items-center gap-2 text-sm font-bold text-[#047857] bg-emerald-50 px-4 py-2 rounded-lg hover:bg-emerald-100 transition-colors">
                       <Edit2 size={16} /> Chỉnh sửa
-                    </button>
-                  ) : (
-                    <button onClick={() => setIsEditingProfile(false)} className="flex items-center gap-2 text-sm font-bold text-slate-500 bg-slate-100 px-4 py-2 rounded-lg hover:bg-slate-200 transition-colors">
-                      <XCircle size={16} /> Hủy sửa
                     </button>
                   )}
                 </div>
 
                 <div className="max-w-2xl flex flex-col md:flex-row gap-8">
-                  <div className="flex-1 space-y-5">
-                    <div className="flex items-center">
-                      <div className="w-28 text-sm text-slate-500 text-right pr-4">Email</div>
-                      <div className="flex-1 text-sm text-slate-800 font-bold bg-slate-50 p-2.5 rounded border border-slate-100">{profileData.email}</div>
-                    </div>
-                    <div className="flex items-center">
-                      <div className="w-28 text-sm text-slate-500 text-right pr-4">Họ và Tên</div>
-                      <div className="flex-1">
-                        {!isEditingProfile ? (<div className="text-sm text-slate-800 font-medium py-2.5">{profileData.fullname}</div>) : (
-                          <input name="fullname" value={profileData.fullname} onChange={handleProfileChange} type="text" className="w-full border border-[#047857] rounded px-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-emerald-100" />
-                        )}
+                  <div className="flex-1">
+
+                    {/* Avatar + name (view mode only) */}
+                    {!isEditingProfile && (
+                      <div className="flex items-center gap-4 mb-6 p-4 bg-slate-50 rounded-xl border border-slate-100">
+                        <div className="w-16 h-16 bg-emerald-50 rounded-full border-2 border-emerald-100 flex items-center justify-center text-2xl font-black text-[#047857] shrink-0">
+                          {profileData.fullname?.charAt(0).toUpperCase() || "U"}
+                        </div>
+                        <div>
+                          <p className="text-base font-bold text-slate-800">{profileData.fullname || "—"}</p>
+                          <p className="text-sm text-slate-500 mt-0.5">{profileData.email}</p>
+                          <p className="text-sm text-slate-500">{profileData.phone || "Chưa có số điện thoại"}</p>
+                        </div>
                       </div>
-                    </div>
-                    <div className="flex items-center">
-                      <div className="w-28 text-sm text-slate-500 text-right pr-4">Số ĐT</div>
-                      <div className="flex-1">
-                        {!isEditingProfile ? (<div className="text-sm text-slate-800 font-medium py-2.5">{profileData.phone}</div>) : (
-                          <input name="phone" value={profileData.phone} onChange={handleProfileChange} type="text" className="w-full border border-[#047857] rounded px-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-emerald-100" />
-                        )}
+                    )}
+
+                    {/* Info rows — view mode */}
+                    {!isEditingProfile && (
+                      <div className="space-y-0 divide-y divide-slate-100 border border-slate-100 rounded-xl overflow-hidden">
+                        <div className="flex items-start px-4 py-3 bg-white">
+                          <span className="w-32 text-xs font-semibold text-slate-400 uppercase tracking-wider pt-0.5">Địa chỉ</span>
+                          <span className="flex-1 text-sm text-slate-700 leading-relaxed">
+                            {profileData.province
+                              ? [profileData.street, profileData.ward, profileData.district, profileData.province].filter(Boolean).join(", ")
+                              : <span className="text-slate-400 italic">Chưa cập nhật địa chỉ</span>}
+                          </span>
+                        </div>
                       </div>
-                    </div>
-                    <div className="flex items-start pt-2 border-t border-slate-100">
-                      <div className="w-28 text-sm text-slate-500 text-right pr-4 pt-2">Địa chỉ</div>
-                      <div className="flex-1">
-                        {!isEditingProfile ? (
-                          <div className="text-sm text-slate-800 font-medium py-2.5 leading-relaxed">
-                            {profileData.province ? `${profileData.street}, ${profileData.ward}, ${profileData.district}, ${profileData.province}` : "Chưa cập nhật địa chỉ"}
+                    )}
+
+                    {/* Edit form */}
+                    {isEditingProfile && (
+                      <div className="space-y-4">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <div>
+                            <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1.5">Họ và Tên</label>
+                            <input
+                              name="fullname"
+                              value={profileData.fullname}
+                              onChange={handleProfileChange}
+                              type="text"
+                              placeholder="Nhập họ và tên..."
+                              className="w-full border border-slate-200 rounded-lg px-3.5 py-2.5 text-sm text-slate-800 bg-white outline-none focus:border-[#047857] focus:ring-2 focus:ring-emerald-50 transition-colors placeholder:text-slate-300"
+                            />
                           </div>
-                        ) : (
+                          <div>
+                            <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1.5">Số điện thoại</label>
+                            <input
+                              name="phone"
+                              value={profileData.phone}
+                              onChange={handleProfileChange}
+                              type="text"
+                              placeholder="VD: 0987654321"
+                              className="w-full border border-slate-200 rounded-lg px-3.5 py-2.5 text-sm text-slate-800 bg-white outline-none focus:border-[#047857] focus:ring-2 focus:ring-emerald-50 transition-colors placeholder:text-slate-300"
+                            />
+                          </div>
+                        </div>
+
+                        <div>
+                          <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1.5">Email</label>
+                          <div className="w-full border border-slate-100 rounded-lg px-3.5 py-2.5 text-sm text-slate-400 bg-slate-50 select-none">{profileData.email}</div>
+                        </div>
+
+                        <div className="border-t border-slate-100 pt-4">
+                          <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-3 flex items-center gap-1.5">
+                            <MapPin size={12} className="text-slate-400" /> Địa chỉ giao hàng
+                          </p>
                           <div className="space-y-3">
-                            <select name="province" value={profileData.province} onChange={handleProfileChange} className="w-full border border-[#047857] rounded px-3 py-2.5 text-sm bg-white tracking-wide">
-                              <option value="">Chọn Tỉnh/Thành</option>
+                            <select
+                              name="province"
+                              value={profileData.province}
+                              onChange={handleProfileChange}
+                              className="w-full border border-slate-200 rounded-lg px-3.5 py-2.5 text-sm text-slate-700 bg-white outline-none focus:border-[#047857] focus:ring-2 focus:ring-emerald-50 transition-colors appearance-none cursor-pointer"
+                            >
+                              <option value="">— Chọn Tỉnh / Thành phố —</option>
                               {AGRI_LOCATIONS.map((p) => <option key={p.name} value={p.name}>{p.name}</option>)}
                             </select>
                             <div className="grid grid-cols-2 gap-3">
-                              <select name="district" value={profileData.district} onChange={handleProfileChange} className="w-full border border-[#047857] rounded px-3 py-2.5 text-sm bg-white">
-                                <option value="">Quận/Huyện</option>
+                              <select
+                                name="district"
+                                value={profileData.district}
+                                onChange={handleProfileChange}
+                                className="w-full border border-slate-200 rounded-lg px-3.5 py-2.5 text-sm text-slate-700 bg-white outline-none focus:border-[#047857] focus:ring-2 focus:ring-emerald-50 transition-colors appearance-none cursor-pointer"
+                              >
+                                <option value="">— Quận / Huyện —</option>
                                 {availableDistricts.map((d) => <option key={d} value={d}>{d}</option>)}
                               </select>
-                              <select name="ward" value={profileData.ward} onChange={handleProfileChange} className="w-full border border-[#047857] rounded px-3 py-2.5 text-sm bg-white">
-                                <option value="">Phường/Xã</option>
+                              <select
+                                name="ward"
+                                value={profileData.ward}
+                                onChange={handleProfileChange}
+                                className="w-full border border-slate-200 rounded-lg px-3.5 py-2.5 text-sm text-slate-700 bg-white outline-none focus:border-[#047857] focus:ring-2 focus:ring-emerald-50 transition-colors appearance-none cursor-pointer"
+                              >
+                                <option value="">— Phường / Xã —</option>
                                 {availableWards.map((w) => <option key={w} value={w}>{w}</option>)}
                               </select>
                             </div>
-                            <input name="street" value={profileData.street} onChange={handleProfileChange} type="text" placeholder="Số nhà, Tên đường..." className="w-full border border-[#047857] rounded px-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-emerald-100" />
+                            <input
+                              name="street"
+                              value={profileData.street}
+                              onChange={handleProfileChange}
+                              type="text"
+                              placeholder="Số nhà, tên đường..."
+                              className="w-full border border-slate-200 rounded-lg px-3.5 py-2.5 text-sm text-slate-800 bg-white outline-none focus:border-[#047857] focus:ring-2 focus:ring-emerald-50 transition-colors placeholder:text-slate-300"
+                            />
                           </div>
-                        )}
-                      </div>
-                    </div>
-                    {isEditingProfile && (
-                      <div className="flex items-center pt-6">
-                        <div className="w-28"></div>
-                        <button onClick={handleUpdateProfile} disabled={isUpdating} className={`flex items-center gap-2 bg-[#047857] text-white px-8 py-3 text-sm font-bold rounded shadow-md transition-colors ${isUpdating ? 'opacity-50' : 'hover:bg-[#035b42]'}`}>
-                          {isUpdating ? 'Đang lưu...' : <><Check size={18} /> Lưu thay đổi</>}
-                        </button>
+                        </div>
+
+                        <div className="flex items-center gap-3 pt-2">
+                          <button
+                            onClick={handleUpdateProfile}
+                            disabled={isUpdating}
+                            className={`flex items-center gap-2 bg-[#047857] text-white px-6 py-2.5 text-sm font-bold rounded-lg shadow-sm transition-colors ${isUpdating ? 'opacity-50 cursor-not-allowed' : 'hover:bg-[#035b42]'}`}
+                          >
+                            {isUpdating ? (
+                              <><span className="w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin"></span> Đang lưu...</>
+                            ) : (
+                              <><Check size={16} /> Lưu thay đổi</>
+                            )}
+                          </button>
+                          <button
+                            onClick={() => setIsEditingProfile(false)}
+                            className="flex items-center gap-2 text-sm font-medium text-slate-500 bg-slate-100 px-5 py-2.5 rounded-lg hover:bg-slate-200 transition-colors"
+                          >
+                            <XCircle size={16} /> Hủy
+                          </button>
+                        </div>
                       </div>
                     )}
                   </div>
-                  <div className="w-full md:w-64 md:border-l border-slate-100 flex flex-col items-center pt-4">
-                    <div className="w-24 h-24 bg-emerald-50 rounded-full border-2 border-emerald-100 flex items-center justify-center text-3xl font-black text-[#047857] mb-4 shadow-inner">
-                      {profileData.fullname?.charAt(0).toUpperCase() || "U"}
+
+                  {/* Avatar — shown only in edit mode (moved inline in view mode) */}
+                  {isEditingProfile && (
+                    <div className="w-full md:w-48 flex flex-col items-center gap-3 pt-2">
+                      <div className="w-20 h-20 bg-emerald-50 rounded-full border-2 border-emerald-100 flex items-center justify-center text-3xl font-black text-[#047857] shadow-inner">
+                        {profileData.fullname?.charAt(0).toUpperCase() || "U"}
+                      </div>
+                      <p className="text-xs text-slate-400 text-center">Ảnh đại diện</p>
                     </div>
-                  </div>
+                  )}
                 </div>
               </div>
             )}
@@ -511,7 +686,7 @@ export const Profile = () => {
                       
                       return (
                         <div key={idx} className="flex gap-3 items-center">
-                          <img src={`http://localhost:3001/images/products/${item.image}`} className="w-14 h-14 bg-white border border-slate-200 rounded object-contain p-1" />
+                          <img src={`${IMAGE_URL}/${item.image}`} className="w-14 h-14 bg-white border border-slate-200 rounded object-contain p-1" />
                           <div className="flex-1">
                             <p className="text-sm font-bold text-slate-800 line-clamp-1">{item.name}</p>
                             <p className="text-xs text-slate-500">Phân loại: {item.q25 > 0 ? '25kg ' : ''}{item.q50 > 0 ? '50kg ' : ''}{item.qKg > 0 ? 'Lẻ' : ''}</p>
