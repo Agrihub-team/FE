@@ -115,12 +115,13 @@ export const Checkout = () => {
         const listAddr = Array.isArray(addrRes) ? addrRes : addrRes?.data || [];
         setSavedAddresses(listAddr);
         const allVouchers = Array.isArray(voucherRes) ? voucherRes : voucherRes?.data || [];
-        const now = new Date();
+        const today = new Date(); today.setHours(0, 0, 0, 0);
+        const tomorrow = new Date(today); tomorrow.setDate(today.getDate() + 1);
         setVouchers(allVouchers.filter((v: any) =>
           (!v.applicableProducts || v.applicableProducts.length === 0) &&
           (v.quantity == null || v.quantity > 0) &&
-          (!v.startDate || new Date(v.startDate) <= now) &&
-          (!v.endDate || new Date(v.endDate) >= now)
+          (!v.startDate || new Date(v.startDate) < tomorrow) &&
+          (!v.endDate || new Date(v.endDate) >= today)
         ));
 
         const defaultAddr =
