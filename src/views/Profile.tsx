@@ -362,100 +362,102 @@ export const Profile = () => {
                     <p className="text-slate-500 text-sm">Chưa có đơn hàng trong mục này</p>
                   </div>
                 ) : (
-                  <div className="space-y-4">
+                  <div className="space-y-3">
                     {filteredOrders.map((order: any) => {
                       const statusInfo = STATUS_MAP[order.status] ?? { label: order.status, cls: "bg-slate-50 text-slate-600 border-slate-200", dot: "bg-slate-400", badgeCls: "bg-slate-100 text-slate-500" };
                       const voucherInfo = getOrderVoucherInfo(order);
                       const isPaid = order.paymentStatus === 'paid';
+                      const previewItems = order.items?.slice(0, 2) || [];
+                      const extraCount = (order.items?.length || 0) - 2;
 
                       return (
-                        <div key={order._id} className="bg-white shadow-sm rounded-lg overflow-hidden border border-slate-100">
+                        <div key={order._id} className="bg-white rounded-xl border border-slate-100 overflow-hidden hover:shadow-md hover:border-slate-200 transition-all duration-200">
 
                           {/* Card header */}
-                          <div className="px-5 py-3.5 bg-slate-50 border-b border-slate-100 flex justify-between items-center">
-                            <div className="flex items-center gap-2.5">
-                              <Store size={15} className="text-slate-500"/>
+                          <div className="flex items-center justify-between px-5 py-3 border-b border-slate-100 bg-slate-50/70">
+                            <div className="flex items-center gap-2">
+                              <Store size={14} className="text-[#047857]" />
                               <span className="text-sm font-bold text-slate-700">Agri-Hub Official</span>
-                              <span className="text-slate-300">|</span>
-                              <span className="text-xs text-slate-400 font-medium flex items-center gap-1">
-                                <Calendar size={11}/> {new Date(order.createdAt).toLocaleDateString('vi-VN')}
+                              <span className="text-slate-200 select-none">|</span>
+                              <span className="text-[11px] text-slate-400 flex items-center gap-1 font-medium">
+                                <Calendar size={10}/> {new Date(order.createdAt).toLocaleDateString('vi-VN')}
                               </span>
                             </div>
                             <div className="flex items-center gap-2">
                               {isPaid && (
-                                <span className="text-emerald-600 font-bold bg-emerald-50 px-2 py-1 rounded-full text-[10px] flex items-center gap-1 border border-emerald-100">
-                                  <CheckCircle2 size={11}/> ĐÃ THANH TOÁN
+                                <span className="text-emerald-600 text-[10px] font-bold bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-100 flex items-center gap-1">
+                                  <CheckCircle2 size={10}/> Đã TT
                                 </span>
                               )}
-                              <span className={`inline-flex items-center gap-1.5 text-xs font-bold px-3 py-1.5 rounded-full border ${statusInfo.cls}`}>
-                                <span className={`w-2 h-2 rounded-full shrink-0 ${statusInfo.dot}`}></span>
+                              <span className={`inline-flex items-center gap-1.5 text-[11px] font-bold px-3 py-1 rounded-full border ${statusInfo.cls}`}>
+                                <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${statusInfo.dot}`}></span>
                                 {statusInfo.label}
                               </span>
                             </div>
                           </div>
 
-                          {/* Items */}
-                          <div className="px-5 py-5 border-b border-slate-100 cursor-pointer hover:bg-slate-50/60 transition-colors" onClick={() => openOrderModal(order)}>
-                            {order.items?.map((item: any, idx: number) => {
-                              const rawPrice = (Number(item.q25)*Number(item.p25)) + (Number(item.q50)*Number(item.p50)) + (Number(item.qKg)*Number(item.pKg));
-                              const itemV = item.itemVoucher;
-                              const itemDiscount = itemV ? (itemV.discount || 0) : 0;
-                              const qty = Number(item.q25) + Number(item.q50) + Number(item.qKg);
-                              const specs = [item.q25 > 0 && `${item.q25} bao 25kg`, item.q50 > 0 && `${item.q50} bao 50kg`, item.qKg > 0 && `${item.qKg} ký`].filter(Boolean).join(" · ");
-
-                              return (
-                                <div key={idx} className="flex gap-4 mb-5 last:mb-0">
-                                  <div className="w-24 h-24 border border-slate-200 rounded-lg shrink-0 bg-white flex items-center justify-center overflow-hidden">
-                                    <img
-                                      src={`${IMAGE_URL}/${item.image}`}
-                                      className="w-full h-full object-contain p-1.5"
-                                      onError={(e) => { (e.target as HTMLImageElement).src = 'https://via.placeholder.com/96?text=?'; }}
-                                    />
-                                  </div>
-                                  <div className="flex-1 min-w-0">
-                                    <p className="text-base text-slate-800 font-semibold line-clamp-2 leading-snug">{item.name}</p>
-                                    <p className="text-sm text-slate-500 mt-1">{specs || "—"}</p>
-                                    <div className="flex items-center gap-2 mt-1.5">
-                                      <span className="text-xs font-bold text-slate-400 bg-slate-100 px-2 py-0.5 rounded-full">x{qty} sản phẩm</span>
-                                      {itemDiscount > 0 && itemV?.code && (
-                                        <span className="text-[10px] text-yellow-600 bg-yellow-50 px-2 py-0.5 rounded-full font-bold border border-yellow-100 flex items-center gap-1">
-                                          <Tag size={9}/> {itemV.code}: -{itemDiscount.toLocaleString()}đ
-                                        </span>
-                                      )}
+                          {/* Items preview */}
+                          <div
+                            className="px-5 py-4 cursor-pointer hover:bg-slate-50/40 transition-colors"
+                            onClick={() => openOrderModal(order)}
+                          >
+                            <div className="space-y-3">
+                              {previewItems.map((item: any, idx: number) => {
+                                const qty = Number(item.q25) + Number(item.q50) + Number(item.qKg);
+                                const itemPrice = (Number(item.q25)*Number(item.p25)) + (Number(item.q50)*Number(item.p50)) + (Number(item.qKg)*Number(item.pKg));
+                                const iDisc = item.itemVoucher?.discount || 0;
+                                const specs = [item.q25 > 0 && `${item.q25} bao 25kg`, item.q50 > 0 && `${item.q50} bao 50kg`, item.qKg > 0 && `${item.qKg} ký`].filter(Boolean).join(" · ");
+                                return (
+                                  <div key={idx} className="flex items-center gap-3">
+                                    <div className="w-[60px] h-[60px] rounded-lg border border-slate-100 bg-white shrink-0 overflow-hidden">
+                                      <img
+                                        src={`${IMAGE_URL}/${item.image}`}
+                                        className="w-full h-full object-contain p-1"
+                                        onError={(e) => { (e.target as HTMLImageElement).src = 'https://via.placeholder.com/60?text=?'; }}
+                                      />
+                                    </div>
+                                    <div className="flex-1 min-w-0">
+                                      <p className="text-sm font-semibold text-slate-800 line-clamp-1 leading-snug">{item.name}</p>
+                                      <p className="text-xs text-slate-400 mt-0.5">{specs || "—"}</p>
+                                    </div>
+                                    <div className="text-right shrink-0">
+                                      <p className="text-sm font-bold text-slate-700">{(itemPrice - iDisc).toLocaleString()}đ</p>
+                                      <p className="text-[11px] text-slate-400">×{qty}</p>
                                     </div>
                                   </div>
-                                  <div className="text-right shrink-0">
-                                    {itemDiscount > 0 && (
-                                      <p className="text-xs text-slate-300 line-through mb-0.5">{(rawPrice || 0).toLocaleString()}đ</p>
-                                    )}
-                                    <span className="text-base text-slate-800 font-bold">{(rawPrice - itemDiscount).toLocaleString()}đ</span>
-                                  </div>
-                                </div>
-                              );
-                            })}
+                                );
+                              })}
+                              {extraCount > 0 && (
+                                <p className="text-xs text-[#047857] font-semibold text-center py-1.5 bg-emerald-50 rounded-lg border border-emerald-100">
+                                  Xem thêm {extraCount} sản phẩm →
+                                </p>
+                              )}
+                            </div>
                           </div>
 
                           {/* Card footer */}
-                          <div className="px-5 py-4 flex flex-col md:flex-row justify-between items-start md:items-center gap-3">
-                            <div>
-                              <p className="text-sm font-semibold text-slate-500">Mã đơn: <span className="text-slate-700">#{order.orderCode}</span></p>
-                              {order.orderNotes && (
-                                <p className="text-xs text-orange-500 italic mt-1 flex items-center gap-1"><NotebookPen size={11}/> {order.orderNotes}</p>
-                              )}
-                            </div>
-                            <div className="flex items-center gap-4">
+                          <div className="px-5 py-3.5 border-t border-slate-100 bg-white flex items-center justify-between gap-3">
+                            <div className="flex items-center gap-2 flex-wrap min-w-0">
+                              <span className="text-[11px] text-slate-400 font-medium whitespace-nowrap">#{order.orderCode}</span>
                               {voucherInfo.totalDiscount > 0 && (
-                                <span className="text-sm font-bold text-emerald-600 bg-emerald-50 px-3 py-1.5 rounded-full flex items-center gap-1 border border-emerald-100">
-                                  <Tag size={13}/> -{voucherInfo.totalDiscount.toLocaleString()}đ
+                                <span className="text-[10px] font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-100 flex items-center gap-1 shrink-0">
+                                  <Tag size={9}/> -{voucherInfo.totalDiscount.toLocaleString()}đ
                                 </span>
                               )}
+                              {order.orderNotes && (
+                                <span className="text-[11px] text-orange-400 italic flex items-center gap-1 truncate">
+                                  <NotebookPen size={10}/> {order.orderNotes}
+                                </span>
+                              )}
+                            </div>
+                            <div className="flex items-center gap-3 shrink-0">
                               <div className="text-right">
-                                <p className="text-xs text-slate-400 font-medium">Thành tiền</p>
-                                <p className="text-2xl font-black text-[#047857] leading-tight">{(order.totalAmount || 0).toLocaleString()}đ</p>
+                                <p className="text-[10px] text-slate-400 uppercase tracking-wide font-medium">Tổng tiền</p>
+                                <p className="text-lg font-black text-[#047857] leading-none">{(order.totalAmount || 0).toLocaleString()}<span className="text-sm font-bold ml-0.5">đ</span></p>
                               </div>
                               <button
                                 onClick={() => openOrderModal(order)}
-                                className="px-5 py-2.5 bg-white border-2 border-slate-200 text-slate-700 text-sm font-semibold rounded-lg hover:border-[#047857] hover:text-[#047857] transition-colors"
+                                className="px-4 py-2 text-xs font-bold text-[#047857] border-2 border-[#047857]/30 rounded-lg hover:border-[#047857] hover:bg-[#047857] hover:text-white transition-all"
                               >
                                 Chi tiết
                               </button>
@@ -636,66 +638,109 @@ export const Profile = () => {
       {/* ================= MODAL CHI TIẾT ĐƠN HÀNG ================= */}
       {isModalOpen && selectedOrder && (() => {
         const vInfo = getOrderVoucherInfo(selectedOrder);
+        const statusInfo = STATUS_MAP[selectedOrder.status] ?? { label: selectedOrder.status, cls: "bg-slate-50 text-slate-600 border-slate-200", dot: "bg-slate-400", badgeCls: "bg-slate-100 text-slate-500" };
         return (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm">
-            <div className="bg-white rounded-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto shadow-2xl">
-              
-              <div className="sticky top-0 bg-white border-b border-slate-100 px-6 py-4 flex justify-between items-center z-10">
+          <div
+            className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/50 p-0 sm:p-4 backdrop-blur-sm"
+            onClick={(e) => { if (e.target === e.currentTarget) setIsModalOpen(false); }}
+          >
+            <div className="bg-white w-full sm:rounded-2xl sm:max-w-[560px] max-h-[92vh] overflow-hidden shadow-2xl flex flex-col">
+
+              {/* Modal header */}
+              <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100 shrink-0">
                 <div>
-                  <h3 className="text-lg font-black text-slate-800 uppercase tracking-wide">Chi tiết đơn hàng</h3>
-                  <p className="text-xs text-slate-500 font-medium">Mã đơn: #{selectedOrder.orderCode}</p>
+                  <h3 className="text-base font-black text-slate-900 uppercase tracking-wide">Chi tiết đơn hàng</h3>
+                  <div className="flex items-center gap-2 mt-1">
+                    <span className="text-[11px] text-slate-400 font-semibold">#{selectedOrder.orderCode}</span>
+                    <span className={`inline-flex items-center gap-1 text-[10px] font-bold px-2.5 py-0.5 rounded-full border ${statusInfo.cls}`}>
+                      <span className={`w-1.5 h-1.5 rounded-full ${statusInfo.dot}`}></span>
+                      {statusInfo.label}
+                    </span>
+                    {selectedOrder.paymentStatus === 'paid' && (
+                      <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-700 border border-emerald-200">
+                        <CheckCircle2 size={10}/> Đã TT
+                      </span>
+                    )}
+                  </div>
                 </div>
-                <button onClick={() => setIsModalOpen(false)} className="p-2 bg-slate-100 hover:bg-red-100 hover:text-red-600 rounded-full transition-colors">
+                <button
+                  onClick={() => setIsModalOpen(false)}
+                  className="p-2 hover:bg-red-50 hover:text-red-500 rounded-full transition-colors text-slate-400"
+                >
                   <X size={20} />
                 </button>
               </div>
 
-              <div className="p-6 space-y-6">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-slate-50 p-4 rounded-xl border border-slate-100">
-                  <div>
-                    <p className="text-[10px] text-slate-400 font-bold uppercase mb-1 flex items-center gap-1"><MapPin size={12}/> Người nhận</p>
+              {/* Scrollable body */}
+              <div className="overflow-y-auto flex-1 p-5 space-y-4">
+
+                {/* Địa chỉ + thanh toán */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div className="bg-slate-50 rounded-xl p-4 border border-slate-100">
+                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-1.5 mb-2.5">
+                      <MapPin size={11}/> Giao tới
+                    </p>
                     <p className="text-sm font-bold text-slate-800">{selectedOrder.shippingAddress?.receiver_name}</p>
-                    <p className="text-xs text-slate-600 font-medium">{selectedOrder.shippingAddress?.phone}</p>
-                    <p className="text-xs text-slate-600 mt-1 pr-2 leading-relaxed italic">{selectedOrder.shippingAddress?.street}, {selectedOrder.shippingAddress?.ward}, {selectedOrder.shippingAddress?.district}, {selectedOrder.shippingAddress?.province}</p>
+                    <p className="text-xs text-slate-500 font-medium mt-0.5">{selectedOrder.shippingAddress?.phone}</p>
+                    <p className="text-xs text-slate-500 mt-1.5 leading-relaxed">
+                      {[selectedOrder.shippingAddress?.street, selectedOrder.shippingAddress?.ward, selectedOrder.shippingAddress?.district, selectedOrder.shippingAddress?.province].filter(Boolean).join(", ")}
+                    </p>
                   </div>
-                  <div className="border-t md:border-t-0 md:border-l border-slate-200 pt-3 md:pt-0 md:pl-4">
-                    <p className="text-[10px] text-slate-400 font-bold uppercase mb-1 flex items-center gap-1"><CreditCard size={12}/> Thanh toán</p>
+                  <div className="bg-slate-50 rounded-xl p-4 border border-slate-100">
+                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-1.5 mb-2.5">
+                      <CreditCard size={11}/> Thanh toán
+                    </p>
                     <p className="text-sm font-bold text-slate-800 uppercase">{selectedOrder.paymentMethod}</p>
-                    <p className="text-xs mt-1">{selectedOrder.paymentStatus === 'paid' ? <span className="text-emerald-600 font-black">ĐÃ THANH TOÁN</span> : <span className="text-orange-500 font-bold">CHƯA THANH TOÁN</span>}</p>
-                    <p className="text-[10px] text-slate-500 mt-3 flex items-center gap-1 font-medium"><Calendar size={10}/> {new Date(selectedOrder.createdAt).toLocaleString('vi-VN')}</p>
+                    <span className={`inline-block text-[10px] font-black mt-1.5 px-2.5 py-1 rounded-full ${selectedOrder.paymentStatus === 'paid' ? 'bg-emerald-100 text-emerald-700' : 'bg-orange-100 text-orange-600'}`}>
+                      {selectedOrder.paymentStatus === 'paid' ? '✓ Đã thanh toán' : '⏳ Chưa thanh toán'}
+                    </span>
+                    <p className="text-[10px] text-slate-400 mt-2.5 flex items-center gap-1 font-medium">
+                      <Calendar size={10}/> {new Date(selectedOrder.createdAt).toLocaleString('vi-VN')}
+                    </p>
                   </div>
                 </div>
 
+                {/* Ghi chú */}
                 {selectedOrder.orderNotes && (
-                  <div className="bg-yellow-50 border border-yellow-100 p-3 rounded-lg flex items-start gap-2">
-                    <NotebookPen size={16} className="text-yellow-600 mt-0.5" />
+                  <div className="bg-amber-50 border border-amber-100 rounded-xl p-3.5 flex items-start gap-3">
+                    <NotebookPen size={15} className="text-amber-500 shrink-0 mt-0.5" />
                     <div>
-                      <p className="text-[10px] font-bold text-yellow-600 uppercase mb-0.5">Ghi chú</p>
-                      <p className="text-sm font-medium text-yellow-800 leading-relaxed italic">"{selectedOrder.orderNotes}"</p>
+                      <p className="text-[10px] font-black text-amber-600 uppercase tracking-wide mb-0.5">Ghi chú</p>
+                      <p className="text-sm text-amber-800 italic leading-relaxed">"{selectedOrder.orderNotes}"</p>
                     </div>
                   </div>
                 )}
 
+                {/* Danh sách sản phẩm */}
                 <div>
-                  <p className="text-[10px] text-slate-400 font-bold uppercase mb-3 border-b border-slate-100 pb-2">Danh sách mặt hàng</p>
-                  <div className="space-y-4">
+                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-1.5 mb-2.5">
+                    <FileText size={11}/> Sản phẩm ({selectedOrder.items?.length || 0})
+                  </p>
+                  <div className="divide-y divide-slate-100 border border-slate-100 rounded-xl overflow-hidden">
                     {selectedOrder.items?.map((item: any, idx: number) => {
                       const itemPrice = (Number(item.q25)*Number(item.p25)) + (Number(item.q50)*Number(item.p50)) + (Number(item.qKg)*Number(item.pKg));
                       const iV = item.itemVoucher;
                       const iDisc = iV ? (iV.discount || 0) : 0;
-                      
+                      const qty = Number(item.q25)+Number(item.q50)+Number(item.qKg);
+                      const specs = [item.q25 > 0 && `${item.q25} bao 25kg`, item.q50 > 0 && `${item.q50} bao 50kg`, item.qKg > 0 && `${item.qKg} ký lẻ`].filter(Boolean).join(" · ");
                       return (
-                        <div key={idx} className="flex gap-3 items-center">
-                          <img src={`${IMAGE_URL}/${item.image}`} className="w-14 h-14 bg-white border border-slate-200 rounded object-contain p-1" />
-                          <div className="flex-1">
-                            <p className="text-sm font-bold text-slate-800 line-clamp-1">{item.name}</p>
-                            <p className="text-xs text-slate-500">Phân loại: {item.q25 > 0 ? '25kg ' : ''}{item.q50 > 0 ? '50kg ' : ''}{item.qKg > 0 ? 'Lẻ' : ''}</p>
-                            {iDisc > 0 && <p className="text-[10px] text-yellow-600 font-black mt-1 uppercase flex items-center gap-1 bg-yellow-50 px-1.5 py-0.5 rounded border border-yellow-100 w-fit"><Tag size={10}/> Voucher: -{iDisc.toLocaleString()}đ</p>}
+                        <div key={idx} className="flex gap-3 p-3.5 bg-white">
+                          <div className="w-[56px] h-[56px] rounded-xl border border-slate-100 bg-slate-50 shrink-0 overflow-hidden flex items-center justify-center">
+                            <img src={`${IMAGE_URL}/${item.image}`} className="w-full h-full object-contain p-1" />
                           </div>
-                          <div className="text-right">
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-bold text-slate-800 line-clamp-2 leading-snug">{item.name}</p>
+                            <p className="text-xs text-slate-400 mt-0.5">{specs || "—"}</p>
+                            {iDisc > 0 && (
+                              <span className="inline-flex items-center gap-1 text-[9px] text-yellow-600 bg-yellow-50 px-2 py-0.5 rounded-full border border-yellow-100 font-bold mt-1">
+                                <Tag size={8}/> -{iDisc.toLocaleString()}đ
+                              </span>
+                            )}
+                          </div>
+                          <div className="text-right shrink-0">
                             {iDisc > 0 && <p className="text-[10px] text-slate-300 line-through">{(itemPrice || 0).toLocaleString()}đ</p>}
                             <p className="text-sm font-bold text-slate-800">{(itemPrice - iDisc).toLocaleString()}đ</p>
-                            <p className="text-[10px] text-slate-400 font-bold uppercase">x{Number(item.q25)+Number(item.q50)+Number(item.qKg)}</p>
+                            <p className="text-[10px] text-slate-400 font-semibold mt-0.5">×{qty}</p>
                           </div>
                         </div>
                       );
@@ -703,20 +748,37 @@ export const Profile = () => {
                   </div>
                 </div>
 
-                <div className="border-t border-dashed border-slate-300 pt-4 space-y-2">
-                  <div className="flex justify-between text-sm text-slate-600"><span>Tiền hàng:</span><span className="font-semibold text-slate-800">{(selectedOrder.subTotal || 0).toLocaleString()}đ</span></div>
-                  <div className="flex justify-between text-sm text-slate-600"><span>Vận chuyển:</span><span className="font-semibold text-slate-800">+{(selectedOrder.shippingFee || 0).toLocaleString()}đ</span></div>
-                  {vInfo.totalDiscount > 0 && (
-                    <div className="flex justify-between text-sm text-emerald-600 font-bold bg-emerald-50 px-2 py-1.5 rounded border border-emerald-100">
-                      <span>Giảm giá Voucher:</span>
-                      <span>-{vInfo.totalDiscount.toLocaleString()}đ</span>
+                {/* Tổng kết */}
+                <div className="bg-slate-50 rounded-xl border border-slate-100 overflow-hidden">
+                  <div className="divide-y divide-slate-100">
+                    <div className="flex justify-between items-center px-4 py-3 text-sm text-slate-600">
+                      <span>Tiền hàng</span>
+                      <span className="font-semibold text-slate-800">{(selectedOrder.subTotal || 0).toLocaleString()}đ</span>
                     </div>
-                  )}
-                  <div className="flex justify-between items-center pt-2 border-t border-slate-100">
-                    <span className="text-base font-bold text-slate-800">Tổng cộng:</span>
-                    <span className="text-2xl font-black text-[#047857]">{(selectedOrder.totalAmount || 0).toLocaleString()}đ</span>
+                    <div className="flex justify-between items-center px-4 py-3 text-sm text-slate-600">
+                      <span className="flex items-center gap-2">
+                        Phí vận chuyển
+                        {selectedOrder.shippingMethod === 'FAST' && (
+                          <span className="text-[9px] font-black bg-orange-100 text-orange-600 px-1.5 py-0.5 rounded-full">⚡ Hỏa tốc</span>
+                        )}
+                      </span>
+                      <span className="font-semibold text-slate-800">+{(selectedOrder.shippingFee || 0).toLocaleString()}đ</span>
+                    </div>
+                    {vInfo.totalDiscount > 0 && (
+                      <div className="flex justify-between items-center px-4 py-3 text-sm font-bold text-emerald-700 bg-emerald-50/60">
+                        <span className="flex items-center gap-1.5"><Tag size={13}/> Giảm giá voucher</span>
+                        <span>-{vInfo.totalDiscount.toLocaleString()}đ</span>
+                      </div>
+                    )}
+                    <div className="flex justify-between items-center px-4 py-4 bg-white">
+                      <span className="text-sm font-bold text-slate-700 uppercase tracking-wide">Tổng thanh toán</span>
+                      <span className="text-2xl font-black text-[#047857]">
+                        {(selectedOrder.totalAmount || 0).toLocaleString()}<span className="text-base font-bold ml-0.5">đ</span>
+                      </span>
+                    </div>
                   </div>
                 </div>
+
               </div>
             </div>
           </div>
