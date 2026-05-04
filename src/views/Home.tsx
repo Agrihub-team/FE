@@ -11,6 +11,9 @@ import { ChevronRight, ShoppingCart, Zap, Clock } from "lucide-react";
 import { IMAGE_URL as IMAGE_PRODUCT_URL, IMAGE_CAT_URL } from "../utils/config";
 
 const calculateSalePrice = (product, originalPrice) => {
+  if (product.is_discount_active && product.discount_percent_active > 0) {
+    return Math.round(originalPrice * (1 - product.discount_percent_active / 100));
+  }
   if (!product.voucherInfo || originalPrice <= 0) return originalPrice;
   const { discount, type } = product.voucherInfo;
   const discountVal = parseFloat(discount) || 0;
@@ -127,10 +130,11 @@ const ProductCard = ({ product, onAdd }: any) => {
 const FlashSaleCard = ({ product, onAdd }: any) => {
   const originalPrice =
     parseFloat(product.price_bag_25kg) || parseFloat(product.price_bag) || 0;
-  const salePrice = calculateSalePrice(product, originalPrice);
-  const pct = originalPrice > 0
-    ? Math.round((1 - salePrice / originalPrice) * 100)
-    : 0;
+  const salePrice = product.is_discount_active
+    ? (product.final_price_25 || calculateSalePrice(product, originalPrice))
+    : calculateSalePrice(product, originalPrice);
+  const pct = product.discount_percent_active ||
+    (originalPrice > 0 ? Math.round((1 - salePrice / originalPrice) * 100) : 0);
 
   return (
     <div className="w-[260px] md:w-[300px] flex-shrink-0 bg-white rounded-2xl border border-gray-100 hover:border-red-300 hover:shadow-lg transition-all flex flex-col overflow-hidden group">
@@ -165,7 +169,7 @@ const FlashSaleCard = ({ product, onAdd }: any) => {
           <span className="flex items-center gap-1">
             <Clock size={11} className="text-red-500" /> Kết thúc:
           </span>
-          <CountdownTimer endDate={product.voucherInfo?.endDate} />
+          <CountdownTimer endDate={product.discount_end || product.voucherInfo?.endDate} />
         </div>
         <button
           onClick={(e) => { e.preventDefault(); onAdd(product); }}
@@ -198,7 +202,6 @@ const PromoCard = ({ color, title, desc, to = "/products" }: any) => (
 export const Home = () => {
   const [categories, setCategories] = useState<any[]>([]);
   const [allProducts, setAllProducts] = useState<any[]>([]);
-  const [specialOffers, setSpecialOffers] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const addItem = useCartStore((s) => s.addItem);
   const navigate = useNavigate();
@@ -214,14 +217,16 @@ export const Home = () => {
     const p25r = parseFloat(p.price_bag_25kg) || parseFloat(p.price_bag) || 0;
     const p50r = parseFloat(p.price_bag_50kg) || 0;
     const pkr  = parseFloat(p.price_kg) || 0;
+    const pct  = p.is_discount_active ? (p.discount_percent_active || 0) : 0;
+    const applyPct = (v: number) => pct > 0 ? Math.round(v * (1 - pct / 100)) : v;
     addItem({
       _id: `${p._id}-${Date.now()}`,
       originalId: p._id,
       name: p.name,
       image: p.image,
-      q25: 1, p25: calculateSalePrice(p, p25r),
-      q50: 0, p50: calculateSalePrice(p, p50r),
-      qKg: 0, pKg: calculateSalePrice(p, pkr),
+      q25: 1, p25: p.is_discount_active ? (p.final_price_25 || applyPct(p25r)) : calculateSalePrice(p, p25r),
+      q50: 0, p50: p.is_discount_active ? (p.final_price_50 || applyPct(p50r)) : calculateSalePrice(p, p50r),
+      qKg: 0, pKg: p.is_discount_active ? (p.final_price_kg || applyPct(pkr)) : calculateSalePrice(p, pkr),
       itemVoucher: p.voucherInfo || null,
     });
     toast.success(`Đã thêm "${p.name}" vào giỏ hàng!`, { duration: 2500 });
@@ -231,15 +236,13 @@ export const Home = () => {
     const loadData = async () => {
       try {
         setLoading(true);
-        const [catData, prodData, voucherProdRes] = await Promise.all([
+        const [catData, prodData] = await Promise.all([
           categoryService.getAll(),
           productService.getAll(),
-          fetch(`${import.meta.env.VITE_API_URL || "http://localhost:3001/api"}/vouchers/special-offers`).then(r => r.json()),
         ]);
         const allCats = catData?.data || catData || [];
         setCategories(allCats.filter((c: any) => !c.status || c.status === "active"));
         setAllProducts(prodData?.data || prodData?.products || prodData || []);
-        if (voucherProdRes.success) setSpecialOffers(voucherProdRes.data || []);
       } catch (e) {
         console.error("Lỗi tải dữ liệu Home:", e);
       } finally {
@@ -248,6 +251,10 @@ export const Home = () => {
     };
     loadData();
   }, []);
+
+  const newProducts    = allProducts.filter((p) => p.type === "new").slice(0, 5);
+  const hotProducts    = allProducts.filter((p) => p.type === "hot").slice(0, 8);
+  const discountProducts = allProducts.filter((p) => p.is_discount_active);
 
   if (loading)
     return (
@@ -299,9 +306,9 @@ export const Home = () => {
         {/* SẢN PHẨM MỚI NHẬP */}
         <section className="max-w-[1200px] mx-auto px-4 mt-8">
           <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm">
-            <SectionHeader title="Sản phẩm mới nhập" to="/products" />
+            <SectionHeader title="Sản phẩm mới nhập" to="/products?type=new" />
             <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-              {allProducts.slice(0, 5).map((p, idx) => (
+              {(newProducts.length > 0 ? newProducts : allProducts.slice(0, 5)).map((p, idx) => (
                 <ProductCard key={p._id || idx} product={p} onAdd={handleAddToCart} />
               ))}
             </div>
@@ -319,14 +326,14 @@ export const Home = () => {
                   <p className="text-xs text-yellow-200 mt-2 italic">Ưu đãi độc quyền – Giảm 20%</p>
                 </div>
                 <Link
-                  to="/products"
+                  to="/products?type=hot"
                   className="mt-4 bg-white text-gray-800 font-bold px-5 py-2 rounded-full text-xs hover:bg-[#fbc02d] transition w-fit flex items-center gap-1"
                 >
-                  Mua ngay <ChevronRight size={13} />
+                  Xem tất cả <ChevronRight size={13} />
                 </Link>
               </div>
               <div className="lg:w-[78%] grid grid-cols-2 md:grid-cols-4 gap-4">
-                {allProducts.slice(0, 8).map((p, idx) => (
+                {(hotProducts.length > 0 ? hotProducts : allProducts.slice(0, 8)).map((p, idx) => (
                   <ProductCard key={p._id || idx} product={p} onAdd={handleAddToCart} />
                 ))}
               </div>
@@ -344,7 +351,7 @@ export const Home = () => {
         </section>
 
         {/* FLASH SALE */}
-        {specialOffers.length > 0 && (
+        {discountProducts.length > 0 && (
           <section className="max-w-[1200px] mx-auto px-4 mt-8">
             <div className="rounded-2xl overflow-hidden border-2 border-red-500 shadow-lg bg-white">
               <div className="bg-gradient-to-r from-red-600 to-red-500 px-6 py-4 flex items-center justify-between">
@@ -356,7 +363,7 @@ export const Home = () => {
                 </span>
               </div>
               <div className="p-5 flex gap-4 overflow-x-auto no-scrollbar">
-                {specialOffers.map((p, idx) => (
+                {discountProducts.map((p, idx) => (
                   <FlashSaleCard key={p._id || idx} product={p} onAdd={handleAddToCart} />
                 ))}
               </div>

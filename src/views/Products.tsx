@@ -18,6 +18,7 @@ export const Products = () => {
   const categoryQuery   = searchParams.get("category");
   const searchQuery     = searchParams.get("search") || "";
   const repurchaseParam = searchParams.get("repurchase") || "";
+  const typeQuery       = searchParams.get("type") || "";
   const repurchaseIds   = repurchaseParam ? repurchaseParam.split(",").filter(Boolean) : [];
 
   const [activeCategoryName, setActiveCategoryName] = useState(null);
@@ -133,6 +134,11 @@ export const Products = () => {
       });
     }
 
+    // --- LỌC THEO TYPE (mới/hot) ---
+    if (typeQuery) {
+      result = result.filter((p) => p.type === typeQuery);
+    }
+
     // --- LỌC TÌM KIẾM ---
     if (repurchaseIds.length > 0) {
       result = result.filter((p) => repurchaseIds.includes(p._id?.toString()));
@@ -160,6 +166,7 @@ export const Products = () => {
     categories,
     searchQuery,
     repurchaseParam,
+    typeQuery,
   ]);
 
   const safeProducts = Array.isArray(filteredProducts) ? filteredProducts : [];
@@ -200,6 +207,17 @@ export const Products = () => {
     <>
       <Header />
       <div className="min-h-screen bg-[#f8f9fa] py-8 font-sans text-gray-800">
+        {typeQuery && (
+          <div className="max-w-[1440px] mx-auto px-4 md:px-8 mb-4">
+            <div className="bg-emerald-50 border border-emerald-200 rounded-xl px-5 py-3 flex items-center justify-between">
+              <p className="text-sm font-bold text-emerald-700 flex items-center gap-2">
+                {typeQuery === "new" ? "🌱 Sản phẩm mới nhập" : "🔥 Sản phẩm bán chạy nhất"}
+                <span className="text-emerald-600 font-normal">— {safeProducts.length} sản phẩm</span>
+              </p>
+              <Link to="/products" className="text-xs font-bold text-emerald-600 hover:text-emerald-800 underline">Xem tất cả</Link>
+            </div>
+          </div>
+        )}
         {repurchaseIds.length > 0 && (
           <div className="max-w-[1440px] mx-auto px-4 md:px-8 mb-4">
             <div className="bg-red-50 border border-red-200 rounded-xl px-5 py-3 flex items-center justify-between">
@@ -326,7 +344,7 @@ export const Products = () => {
           <main className="flex-1 bg-white p-6 border border-gray-200 shadow-sm border-t-4 border-t-[#047857] flex flex-col rounded-lg">
             <div className="flex justify-between items-center pb-4 mb-6 border-b border-gray-100">
               <h1 className="text-base font-bold text-gray-800 uppercase tracking-tight">
-                {activeCategoryName || "Tất cả sản phẩm"}
+                {activeCategoryName || (typeQuery === "new" ? "Sản phẩm mới nhập" : typeQuery === "hot" ? "Bán chạy nhất" : "Tất cả sản phẩm")}
                 <span className="text-gray-400 text-xs ml-2 font-normal">
                   ({safeProducts.length} sản phẩm)
                 </span>
