@@ -319,9 +319,10 @@ export const Cart = () => {
                                 <div
                                   className={`text-[9px] mt-1 italic ${isActive ? "text-green-100" : "text-gray-500"}`}
                                 >
-                                  Giảm {Number(v.discount).toLocaleString()}đ
-                                  (Đơn từ {Number(v.minAmount).toLocaleString()}
-                                  đ)
+                                  Giảm {v.type === 'percentage'
+                                    ? `${Number(v.discount)}%`
+                                    : `${Number(v.discount).toLocaleString()}đ`}
+                                  {' '}(Đơn từ {Number(v.minAmount).toLocaleString()}đ)
                                 </div>
                               </button>
                             );
