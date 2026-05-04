@@ -80,7 +80,10 @@ export const Cart = () => {
   // 2. GIẢM GIÁ (Dựa trên voucher chọn ở sidebar)
   const discountAmount = useMemo(() => {
     if (!selectedVoucher || rawTotal < selectedVoucher.minAmount) return 0;
-    return Number(selectedVoucher.discount);
+    if (selectedVoucher.type === 'percentage') {
+      return Math.round(rawTotal * Math.min(100, Number(selectedVoucher.discount)) / 100);
+    }
+    return Number(selectedVoucher.discount) || 0;
   }, [selectedVoucher, rawTotal]);
 
   // 3. TỔNG THANH TOÁN
