@@ -19,9 +19,9 @@ export const useAuthStore = create<AuthState>((set) => ({
   logout: () => {
     localStorage.removeItem('token');
     localStorage.removeItem('user');
+    localStorage.removeItem('agrihub-cart'); // xóa cart persist ngay lập tức
     set({ user: null });
-
-    // Xóa giỏ hàng khi logout để tránh lộ dữ liệu sang user khác
+    // Reset Zustand cart state (không await để không chặn logout)
     import('./cartStore').then(({ useCartStore }) => {
       useCartStore.getState().clearCart();
     });
