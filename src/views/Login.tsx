@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useLocation } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -12,7 +12,6 @@ import { Footer } from "../components/Footer";
 import { authService } from "../controllers/authService";
 import { useAuthStore } from "../store/authStore";
 import { useCartStore } from "../store/cartStore";
-import { apiClient } from "../utils/api";
 
 const loginSchema = z.object({
   email: z
@@ -40,6 +39,7 @@ type ResetPasswordInputs = z.infer<typeof resetPasswordSchema>;
 
 export const Login = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const loginAction = useAuthStore((state) => state.login);
 
   const [showPassword, setShowPassword] = useState(false);
@@ -86,19 +86,16 @@ export const Login = () => {
       throw new Error("Dữ liệu tài khoản bị thiếu!");
     }
 
-    // Lưu token trước để apiClient có thể dùng ngay
     localStorage.setItem("token", tokenData);
     localStorage.setItem("user", JSON.stringify(userData));
 
-    // Merge giỏ hàng local (chưa đăng nhập) lên server
-    const localItems = useCartStore.getState().items;
-    if (localItems.length > 0) {
-      await apiClient.post("/cart/sync", { items: localItems }).catch(() => {});
-    }
+    // Merge giỏ hàng local (chưa đăng nhập) với giỏ hàng cũ trên server
+    await useCartStore.getState().loadCart().catch(() => {});
 
     loginAction(userData, tokenData);
     toast.success("Đăng nhập thành công!");
-    navigate(userData.role?.toUpperCase() === "ADMIN" ? "/admin" : "/");
+    const from = (location.state as any)?.from;
+    navigate(from || (userData.role?.toUpperCase() === "ADMIN" ? "/admin" : "/"));
   };
 
   const onLogin = async (data: LoginFormInputs) => {

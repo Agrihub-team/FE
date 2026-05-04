@@ -107,7 +107,7 @@ export const Cart = () => {
 
     if (!localStorage.getItem('token')) {
       toast.warning("Vui lòng đăng nhập để tiến hành thanh toán!");
-      navigate("/login");
+      navigate("/login", { state: { from: "/cart" } });
       return;
     }
     navigate("/checkout", {
