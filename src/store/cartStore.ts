@@ -117,25 +117,43 @@ export const useCartStore = create<CartStore>()(
         .split("-")[0];
       if (!originalProductId) return false;
 
-      const newItem = {
-        ...product,
-        _id: `${originalProductId}-${Date.now()}`,
-        product: originalProductId,
-        q25: Number(product.q25) || 1,
-        q50: Number(product.q50) || 0,
-        qKg: Number(product.qKg) || 0,
-        selected: true,
-        itemVoucher: product.itemVoucher ?? null,
-      };
+      const addQ25 = Number(product.q25) || 1;
+      const addQ50 = Number(product.q50) || 0;
+      const addQKg = Number(product.qKg) || 0;
 
-      const updated = [newItem, ...items];
-      set({ items: updated });
+      // Nếu sp đã có trong giỏ thì cộng số lượng, không tạo dòng mới
+      const existing = items.find((i) => (i.product || i.originalId) === originalProductId);
+      let updated: CartItem[];
 
-      // Chỉ gọi API đồng bộ nếu đã có token[cite: 1]
-      const token = localStorage.getItem("token");
-      if (token) {
-        debouncedSync(updated);
+      if (existing) {
+        updated = items.map((i) =>
+          (i.product || i.originalId) === originalProductId
+            ? {
+                ...i,
+                q25: i.q25 + addQ25,
+                q50: i.q50 + addQ50,
+                qKg: i.qKg + addQKg,
+                selected: true,
+              }
+            : i
+        );
+      } else {
+        const newItem = {
+          ...product,
+          _id: `${originalProductId}-${Date.now()}`,
+          product: originalProductId,
+          q25: addQ25,
+          q50: addQ50,
+          qKg: addQKg,
+          selected: true,
+          itemVoucher: product.itemVoucher ?? null,
+        };
+        updated = [newItem, ...items];
       }
+
+      set({ items: updated });
+      const token = localStorage.getItem("token");
+      if (token) debouncedSync(updated);
 
       return true;
     } catch (err: any) {
