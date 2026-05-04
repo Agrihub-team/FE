@@ -54,6 +54,7 @@ interface CartStore {
   getSubTotal: () => number;
   getFinalTotal: () => number;
   clearCart: () => void;
+  clearSelectedItems: () => Promise<void>;
   toggleSelect: (id: string) => Promise<void>;
   applyVoucherToItem: (id: string, voucher: Voucher) => Promise<void>;
   getSelectedTotal: () => number;
@@ -190,6 +191,19 @@ export const useCartStore = create<CartStore>()(
       const token = localStorage.getItem("token");
       if (token) {
         await apiClient.post("/cart/sync", { items: [] });
+      }
+    } catch (error) {
+      console.error(error.message);
+    }
+  },
+
+  clearSelectedItems: async () => {
+    const remaining = get().items.filter((i) => !i.selected);
+    set({ items: remaining });
+    try {
+      const token = localStorage.getItem("token");
+      if (token) {
+        await apiClient.post("/cart/sync", { items: remaining });
       }
     } catch (error) {
       console.error(error.message);

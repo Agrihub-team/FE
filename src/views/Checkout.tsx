@@ -26,7 +26,7 @@ import { IMAGE_URL } from '../utils/config';
 export const Checkout = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const { items, getSelectedTotal, clearCart } = useCartStore();
+  const { items, getSelectedTotal, clearCart, clearSelectedItems } = useCartStore();
   const selectedItems = items.filter((i) => i.selected);
 
   const [formData, setFormData] = useState({
@@ -296,7 +296,7 @@ export const Checkout = () => {
         toast.success("Đang chuyển đến trang thanh toán VNPay...");
         window.location.href = result.vnpUrl;
       } else {
-        await clearCart();
+        await clearSelectedItems();
         toast.success("Đặt hàng thành công!");
         navigate(`/order-success/${result?.order?._id}`);
       }
