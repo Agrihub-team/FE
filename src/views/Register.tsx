@@ -3,10 +3,38 @@ import { Link, useNavigate } from "react-router-dom";
 import { Header } from "../components/Header";
 import { Footer } from "../components/Footer";
 import { authService } from "../controllers/authService";
+import { useAuthStore } from "../store/authStore";
+import { useCartStore } from "../store/cartStore";
 import { toast } from "sonner";
+import { GoogleLogin } from "@react-oauth/google";
+import { Loader2 } from "lucide-react";
 
 export const Register = () => {
   const navigate = useNavigate();
+  const loginAction = useAuthStore((state) => state.login);
+  const [isGoogleLoading, setIsGoogleLoading] = useState(false);
+
+  const onGoogleSuccess = async (credentialResponse: any) => {
+    try {
+      setIsGoogleLoading(true);
+      if (!credentialResponse.credential) { toast.error("Không lấy được thông tin Google!"); return; }
+      const res: any = await authService.googleLogin({ credential: credentialResponse.credential });
+      const responseData = res?.data || res;
+      const userData = responseData?.user || responseData?.data?.user;
+      const tokenData = responseData?.token || responseData?.data?.token;
+      if (!userData || !tokenData) throw new Error("Dữ liệu tài khoản bị thiếu!");
+      localStorage.setItem("token", tokenData);
+      localStorage.setItem("user", JSON.stringify(userData));
+      await useCartStore.getState().loadCart().catch(() => {});
+      loginAction(userData, tokenData);
+      toast.success("Đăng nhập Google thành công!");
+      navigate(userData.role?.toUpperCase() === "ADMIN" ? "/admin" : "/");
+    } catch (error: any) {
+      toast.error(error.response?.data?.message || error.message || "Đăng nhập Google thất bại!");
+    } finally {
+      setIsGoogleLoading(false);
+    }
+  };
 
   const [f, setF] = useState({
     firstName: "",
@@ -221,14 +249,29 @@ export const Register = () => {
 
           <div className="text-center mt-6 text-[14px]">
             <p className="text-gray-600 mb-4">Hoặc đăng nhập bằng</p>
-
-            <div className="flex justify-center gap-2">
-              <button type="button" className="bg-[#3b5998] hover:bg-[#2d4373] text-white py-2 w-[120px] rounded flex items-center justify-center gap-2 text-[13px] transition-colors">
-                <span className="font-bold text-lg font-serif leading-none">f</span> Facebook
-              </button>
-              <button type="button" className="bg-[#dd4b39] hover:bg-[#c23321] text-white py-2 w-[120px] rounded flex items-center justify-center gap-2 text-[13px] transition-colors">
-                <span className="font-bold text-lg font-sans leading-none">G+</span> Google
-              </button>
+            <div className="flex justify-center">
+              <div className="w-[120px] relative">
+                {isGoogleLoading ? (
+                  <button type="button" disabled className="bg-gray-400 text-white py-2 w-full rounded flex items-center justify-center gap-2 text-[13px]">
+                    <Loader2 className="animate-spin" size={16} /> Google
+                  </button>
+                ) : (
+                  <>
+                    <div className="absolute inset-0 bg-[#dd4b39] hover:bg-[#c23321] text-white py-2 rounded flex items-center justify-center gap-2 text-[13px] pointer-events-none z-10">
+                      <span className="font-bold text-lg font-sans leading-none">G+</span> Google
+                    </div>
+                    <div className="opacity-0 cursor-pointer relative z-20">
+                      <GoogleLogin
+                        onSuccess={onGoogleSuccess}
+                        onError={() => toast.error("Đăng nhập Google thất bại!")}
+                        useOneTap={false}
+                        auto_select={false}
+                        width="120"
+                      />
+                    </div>
+                  </>
+                )}
+              </div>
             </div>
           </div>
         </div>

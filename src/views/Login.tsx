@@ -390,17 +390,7 @@ export const Login = () => {
           <div className="text-center mt-8 text-[14px]">
             <p className="text-gray-600 mb-4">Hoặc đăng nhập bằng</p>
 
-            <div className="flex justify-center gap-2">
-              <button
-                type="button"
-                className="bg-[#3b5998] hover:bg-[#2d4373] text-white py-2 w-[120px] rounded flex items-center justify-center gap-2 text-[13px] transition-colors"
-              >
-                <span className="font-bold text-lg font-serif leading-none">
-                  f
-                </span>
-                Facebook
-              </button>
-
+            <div className="flex justify-center">
               <div className="w-[120px] relative">
                 {isGoogleLoading ? (
                   <button
