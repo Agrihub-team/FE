@@ -519,13 +519,15 @@ export const Header = () => {
           </Link>
         </nav>
 
-        {/* Nút Mua hàng nhanh */}
-        <Link
-          to={repurchaseIds.length > 0 ? `/products?repurchase=${repurchaseIds.join(',')}` : '/products'}
-          className={`font-bold px-5 py-2.5 rounded-full transition-colors text-[13px] ${repurchaseIds.length > 0 ? 'bg-[#e53935] hover:bg-red-700 text-white' : 'bg-gray-100 hover:bg-gray-200 text-gray-500'}`}
-        >
-          {repurchaseIds.length > 0 ? '⚡ Mua lại' : 'Mua hàng nhanh'}
-        </Link>
+        {/* Nút Mua hàng nhanh — chỉ hiện khi đã đăng nhập */}
+        {user && (
+          <Link
+            to={repurchaseIds.length > 0 ? `/products?repurchase=${repurchaseIds.join(',')}` : '/products'}
+            className={`font-bold px-5 py-2.5 rounded-full transition-colors text-[13px] ${repurchaseIds.length > 0 ? 'bg-[#e53935] hover:bg-red-700 text-white' : 'bg-gray-100 hover:bg-gray-200 text-gray-500'}`}
+          >
+            {repurchaseIds.length > 0 ? '⚡ Mua lại' : 'Mua hàng nhanh'}
+          </Link>
+        )}
       </div>
     </header>
   );
