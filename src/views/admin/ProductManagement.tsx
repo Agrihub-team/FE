@@ -12,6 +12,7 @@ export const ProductManagement = () => {
 
   const [searchParams] = useSearchParams();
   const highlightId = searchParams.get("highlight");
+  const importId = searchParams.get("import");
 
   const highlightRef = useRef(null);
 
@@ -88,15 +89,63 @@ export const ProductManagement = () => {
   useEffect(() => { loadData(); }, []);
 
 useEffect(() => {
-  if (highlightId) {
+  if (highlightId && products.length > 0) {
     setTimeout(() => {
       const el = document.getElementById(`product-${highlightId}`);
+
       if (el) {
-        el.scrollIntoView({ behavior: "smooth", block: "center" });
+        el.scrollIntoView({
+          behavior: "smooth",
+          block: "center"
+        });
+
+        // add hiệu ứng highlight thêm chút delay cho mượt
+        el.classList.add("ring-2", "ring-yellow-400", "bg-yellow-100");
+
+        setTimeout(() => {
+          el.classList.remove("ring-2", "ring-yellow-400", "bg-yellow-100");
+        }, 2000);
       }
-    }, 300); // delay nhẹ cho DOM render xong
+    }, 300);
   }
 }, [highlightId, products]);
+
+useEffect(() => {
+  if (importId && products.length > 0) {
+    const p = products.find(item => item._id === importId);
+    if (!p) return;
+
+    setTimeout(() => {
+      const el = document.getElementById(`product-${importId}`);
+
+      // 1. scroll tới sản phẩm
+      if (el) {
+        el.scrollIntoView({
+          behavior: "smooth",
+          block: "center"
+        });
+
+        el.classList.add("ring-2", "ring-blue-400", "bg-blue-50");
+        setTimeout(() => {
+          el.classList.remove("ring-2", "ring-blue-400", "bg-blue-50");
+        }, 2000);
+      }
+
+      // 2. mở modal nhập kho
+      setShowImportModal(true);
+
+      setImportForm({
+        product_id: p._id,
+        add_25kg: "",
+        add_50kg: ""
+      });
+
+      setImportSearchTerm(p.name);
+      setIsDropdownOpen(false);
+
+    }, 300);
+  }
+}, [importId, products]);
 
 useEffect(() => {
   const handleClickOutside = (event) => {
