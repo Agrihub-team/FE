@@ -337,18 +337,24 @@ export const Home = () => {
         <section className="max-w-[1200px] mx-auto px-4 mt-8">
           <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm">
             <div className="flex flex-col lg:flex-row gap-5">
-              <div className="lg:w-[22%] bg-gradient-to-br from-[#b39556] to-[#457c4f] rounded-2xl p-6 text-white flex flex-col justify-between min-h-[200px]">
-                <div>
-                  <p className="text-[10px] font-bold uppercase tracking-widest text-yellow-200/80 mb-2">Agri-Hub</p>
-                  <h2 className="text-xl font-black leading-tight uppercase">Bán chạy nhất hàng ngày</h2>
-                  <p className="text-xs text-yellow-200 mt-2 italic">Ưu đãi độc quyền – Giảm 20%</p>
+              <div
+                className="lg:w-[22%] rounded-2xl overflow-hidden text-white flex flex-col justify-between min-h-[200px] relative"
+                style={{ backgroundImage: "url('/camgao.jpg')", backgroundSize: "cover", backgroundPosition: "center bottom" }}
+              >
+                <div className="absolute inset-0 bg-gradient-to-b from-black/50 via-black/20 to-black/60 rounded-2xl" />
+                <div className="relative z-10 p-6 flex flex-col h-full justify-between">
+                  <div>
+                    <p className="text-[10px] font-bold uppercase tracking-widest text-yellow-200/90 mb-2">Agri-Hub</p>
+                    <h2 className="text-xl font-black leading-tight uppercase drop-shadow">Bán chạy nhất hàng ngày</h2>
+                    <p className="text-xs text-yellow-200 mt-2 italic">Ưu đãi độc quyền – Giảm 20%</p>
+                  </div>
+                  <Link
+                    to="/products?type=hot"
+                    className="mt-4 bg-white text-gray-800 font-bold px-5 py-2 rounded-full text-xs hover:bg-[#fbc02d] transition w-fit flex items-center gap-1"
+                  >
+                    Xem tất cả <ChevronRight size={13} />
+                  </Link>
                 </div>
-                <Link
-                  to="/products?type=hot"
-                  className="mt-4 bg-white text-gray-800 font-bold px-5 py-2 rounded-full text-xs hover:bg-[#fbc02d] transition w-fit flex items-center gap-1"
-                >
-                  Xem tất cả <ChevronRight size={13} />
-                </Link>
               </div>
               <div className="lg:w-[78%] grid grid-cols-2 md:grid-cols-4 gap-4">
                 {hotProducts.map((p, idx) => (
