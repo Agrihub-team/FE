@@ -7,7 +7,7 @@ import { productService } from "../controllers/productService";
 import { categoryService } from "../controllers/categoryService";
 import { useCartStore } from "../store/cartStore";
 import { toast } from "sonner";
-import { ChevronRight, ShoppingCart, Zap, Clock } from "lucide-react";
+import { ChevronRight, ChevronLeft, ShoppingCart, Zap, Clock } from "lucide-react";
 import { IMAGE_URL as IMAGE_PRODUCT_URL, IMAGE_CAT_URL } from "../utils/config";
 
 const calculateSalePrice = (product, originalPrice) => {
@@ -203,6 +203,9 @@ export const Home = () => {
   const [categories, setCategories] = useState<any[]>([]);
   const [allProducts, setAllProducts] = useState<any[]>([]);
   const [specialOffers, setSpecialOffers] = useState<any[]>([]);
+  const [posts, setPosts] = useState<any[]>([]);
+  const [postPage, setPostPage] = useState(0);
+  const [reviewIdx, setReviewIdx] = useState(0);
   const [loading, setLoading] = useState(true);
   const addItem = useCartStore((s) => s.addItem);
   const navigate = useNavigate();
@@ -238,15 +241,18 @@ export const Home = () => {
       try {
         setLoading(true);
         const apiBase = import.meta.env.VITE_API_URL || "http://localhost:3001/api";
-        const [catData, prodData, voucherRes] = await Promise.all([
+        const [catData, prodData, voucherRes, postRes] = await Promise.all([
           categoryService.getAll(),
           productService.getAll(),
           fetch(`${apiBase}/vouchers/special-offers`).then(r => r.json()).catch(() => ({ success: false })),
+          fetch(`${apiBase}/posts`).then(r => r.json()).catch(() => []),
         ]);
         const allCats = catData?.data || catData || [];
         setCategories(allCats.filter((c: any) => !c.status || c.status === "active"));
         setAllProducts(prodData?.data || prodData?.products || prodData || []);
         if (voucherRes.success) setSpecialOffers(voucherRes.data || []);
+        const postList = Array.isArray(postRes) ? postRes : (postRes?.data || postRes?.posts || []);
+        setPosts(postList.filter((p: any) => p.status === 'published'));
       } catch (e) {
         console.error("Lỗi tải dữ liệu Home:", e);
       } finally {
@@ -423,6 +429,127 @@ export const Home = () => {
             </div>
           </div>
         </section>
+
+        {/* TIN TỨC & ĐÁNH GIÁ */}
+        {(() => {
+          const STATIC_REVIEWS = [
+            { text: "Tôi lấy cám ở Agri-Hub cho trại heo 200 nái được 2 năm rồi. Giá sỉ tại đây rất tốt, luôn có hàng mới date xa. Thích nhất là đội ngũ kỹ thuật hỗ trợ tư vấn thuốc thang rất nhiệt tình mỗi khi heo bị bệnh. Sẽ ủng hộ dài dài!", name: "Chú Ba Thành", role: "Chủ trại heo Đồng Nai", avatar: "B" },
+            { text: "Gạo ST25 tại Agri-Hub chất lượng đảm bảo, giá cạnh tranh. Tôi mua sỉ cho cửa hàng đã 3 năm, chưa bao giờ thất vọng. Giao hàng nhanh, đóng gói kỹ càng.", name: "Cô Năm Lan", role: "Chủ cửa hàng gạo Bình Dương", avatar: "L" },
+            { text: "Thức ăn chăn nuôi gà ở đây chất lượng tốt, đàn gà lớn nhanh, ít bệnh. Team kỹ thuật tư vấn miễn phí rất hữu ích cho người mới nuôi như tôi.", name: "Anh Tám Hùng", role: "Chủ trại gà Bình Phước", avatar: "H" },
+            { text: "Đặt hàng online rất tiện, thanh toán đa dạng. Sản phẩm đúng mô tả, giao hàng đúng hẹn. Sẽ tiếp tục ủng hộ Agri-Hub!", name: "Chị Bảy Phụng", role: "Nông dân Long An", avatar: "P" },
+          ];
+          const visiblePosts = posts.slice(postPage * 3, postPage * 3 + 3);
+          const totalPages = Math.ceil(posts.length / 3);
+          return (
+            <section className="max-w-[1200px] mx-auto px-4 mt-8">
+              <div className="flex flex-col lg:flex-row gap-5">
+
+                {/* TIN TỨC MỚI NHẤT */}
+                <div className="lg:w-[70%] bg-white p-6 rounded-2xl border border-gray-100 shadow-sm">
+                  <div className="flex items-center justify-between mb-5">
+                    <h2 className="text-xl font-black text-gray-800">Tin tức mới nhất</h2>
+                    {totalPages > 1 && (
+                      <div className="flex gap-2">
+                        <button
+                          onClick={() => setPostPage(p => Math.max(0, p - 1))}
+                          disabled={postPage === 0}
+                          className="w-9 h-9 rounded-full border border-gray-200 flex items-center justify-center hover:border-[#047857] hover:text-[#047857] transition-colors text-gray-400 disabled:opacity-30"
+                        >
+                          <ChevronLeft size={16} />
+                        </button>
+                        <button
+                          onClick={() => setPostPage(p => Math.min(totalPages - 1, p + 1))}
+                          disabled={postPage >= totalPages - 1}
+                          className="w-9 h-9 rounded-full border border-gray-200 flex items-center justify-center hover:border-[#047857] hover:text-[#047857] transition-colors text-gray-400 disabled:opacity-30"
+                        >
+                          <ChevronRight size={16} />
+                        </button>
+                      </div>
+                    )}
+                  </div>
+
+                  {posts.length === 0 ? (
+                    <div className="grid grid-cols-3 gap-4">
+                      {[...Array(3)].map((_, i) => (
+                        <div key={i} className="animate-pulse">
+                          <div className="bg-gray-100 rounded-xl h-40 mb-3" />
+                          <div className="bg-gray-100 h-4 rounded mb-2" />
+                          <div className="bg-gray-100 h-3 rounded w-3/4" />
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                      {visiblePosts.map((post: any) => {
+                        const d = new Date(post.createdAt);
+                        const day = d.getDate().toString().padStart(2, '0');
+                        const monthYear = `${(d.getMonth() + 1).toString().padStart(2, '0')}/${d.getFullYear()}`;
+                        const excerpt = (post.content || '').replace(/<[^>]*>/g, '').slice(0, 90);
+                        return (
+                          <Link key={post._id} to={`/posts/${post._id}`} className="group block">
+                            <div className="relative rounded-xl overflow-hidden mb-3">
+                              <img
+                                src={post.image || `https://picsum.photos/seed/${post._id}/400/240`}
+                                alt={post.title}
+                                className="w-full h-40 object-cover group-hover:scale-105 transition-transform duration-300"
+                                onError={(e) => { (e.target as HTMLImageElement).src = `https://picsum.photos/seed/${post._id}/400/240`; }}
+                              />
+                              <div className="absolute top-3 left-3 bg-[#047857] text-white text-center px-3 py-1.5 rounded-xl leading-none min-w-[52px]">
+                                <p className="text-lg font-black leading-none">{day}</p>
+                                <p className="text-[9px] font-bold mt-0.5">{monthYear}</p>
+                              </div>
+                            </div>
+                            <h3 className="font-bold text-gray-800 text-sm line-clamp-2 group-hover:text-[#047857] transition-colors mb-1.5 leading-snug">{post.title}</h3>
+                            <p className="text-xs text-gray-500 line-clamp-2 leading-relaxed">{excerpt}{excerpt.length >= 90 ? '...' : ''}</p>
+                          </Link>
+                        );
+                      })}
+                    </div>
+                  )}
+
+                  <div className="flex justify-center mt-6">
+                    <Link
+                      to="/posts"
+                      className="border-2 border-[#047857] text-[#047857] px-10 py-2 rounded-full text-sm font-bold hover:bg-[#047857] hover:text-white transition-all"
+                    >
+                      Xem tất cả
+                    </Link>
+                  </div>
+                </div>
+
+                {/* ĐÁNH GIÁ */}
+                <div className="lg:w-[30%] bg-white p-6 rounded-2xl border border-gray-100 shadow-sm flex flex-col">
+                  <h2 className="text-xl font-black text-gray-800 mb-5">Đánh giá</h2>
+                  <div className="flex-1 bg-gray-50 rounded-xl p-5 flex flex-col justify-between min-h-[280px]">
+                    <div className="flex flex-col items-center text-center flex-1">
+                      <div className="w-16 h-16 rounded-full bg-[#047857] flex items-center justify-center text-white text-2xl font-black shadow-md mb-4 shrink-0">
+                        {STATIC_REVIEWS[reviewIdx].avatar}
+                      </div>
+                      <p className="text-sm text-gray-600 leading-relaxed flex-1">
+                        {STATIC_REVIEWS[reviewIdx].text}
+                      </p>
+                      <div className="mt-4">
+                        <p className="text-[#047857] font-black text-base">{STATIC_REVIEWS[reviewIdx].name}</p>
+                        <div className="w-8 h-0.5 bg-yellow-400 mx-auto my-1.5 rounded" />
+                        <p className="text-gray-400 text-xs">{STATIC_REVIEWS[reviewIdx].role}</p>
+                      </div>
+                    </div>
+                    <div className="flex justify-center gap-2 mt-5">
+                      {STATIC_REVIEWS.map((_, i) => (
+                        <button
+                          key={i}
+                          onClick={() => setReviewIdx(i)}
+                          className={`rounded-full transition-all duration-300 ${i === reviewIdx ? 'w-6 h-2.5 bg-[#047857]' : 'w-2.5 h-2.5 bg-gray-200 hover:bg-gray-300'}`}
+                        />
+                      ))}
+                    </div>
+                  </div>
+                </div>
+
+              </div>
+            </section>
+          );
+        })()}
 
       </main>
       <Footer />
