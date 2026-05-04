@@ -21,19 +21,22 @@ export const Cart = () => {
     useCartStore();
 
   useEffect(() => {
+    const token = localStorage.getItem('token');
     loadCart();
     apiClient
       .get("/vouchers")
       .then((res) => setVouchers(res?.data || res || []))
       .catch(() => {});
-    apiClient
-      .get("/orders/my")
-      .then((res) => {
-        const list: any[] = Array.isArray(res) ? res : res?.data || [];
-        list.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-        setRecentOrders(list);
-      })
-      .catch(() => {});
+    if (token) {
+      apiClient
+        .get("/orders/my")
+        .then((res) => {
+          const list: any[] = Array.isArray(res) ? res : res?.data || [];
+          list.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+          setRecentOrders(list);
+        })
+        .catch(() => {});
+    }
     window.scrollTo(0, 0);
   }, [loadCart]);
 

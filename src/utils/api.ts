@@ -19,7 +19,12 @@ async function fetchClient<T = any>(endpoint: string, options: RequestInit = {})
     if (response.status === 401 && !endpoint.includes('/login')) {
       localStorage.removeItem('token');
       localStorage.removeItem('user');
-      window.location.href = '/login';
+      // Chỉ redirect về login nếu đang ở trang cần auth (profile, checkout, change-password)
+      const protectedPaths = ['/profile', '/checkout', '/change-password', '/admin'];
+      const onProtectedPage = protectedPaths.some(p => window.location.pathname.startsWith(p));
+      if (onProtectedPage) {
+        window.location.href = '/login';
+      }
       throw new Error('Phiên đăng nhập hết hạn');
     }
 

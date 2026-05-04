@@ -1,5 +1,6 @@
 // @ts-nocheck
 import { create } from "zustand";
+import { persist } from "zustand/middleware";
 import { apiClient } from "../utils/api";
 
 // Hàm debounce để tránh gọi API quá nhiều lần khi nhấn tăng/giảm số lượng liên tục
@@ -58,7 +59,9 @@ interface CartStore {
   getSelectedTotal: () => number;
 }
 
-export const useCartStore = create<CartStore>((set, get) => ({
+export const useCartStore = create<CartStore>()(
+  persist(
+    (set, get) => ({
   items: [],
   appliedVoucher: null,
 
@@ -225,4 +228,10 @@ export const useCartStore = create<CartStore>((set, get) => ({
       return sum + Math.max(0, itemTotal - discount);
     }, 0);
   },
-}));
+    }),
+    {
+      name: "agrihub-cart",
+      partialize: (state) => ({ items: state.items }),
+    }
+  )
+);

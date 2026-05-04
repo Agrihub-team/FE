@@ -13,6 +13,8 @@ import { PaymentError } from './views/PaymentError';
 import { ChangePassword } from './views/ChangePassword';
 import { NewsPage } from './views/NewsPage'
 import { ContactPage } from './views/ContactPage'
+import { AboutPage } from './views/AboutPage'
+import { FAQPage } from './views/FAQPage'
 
 // Admin Views
 import { AdminLayout } from "./components/admin/AdminLayout";
@@ -42,6 +44,8 @@ export const AppRouter = () => (
       <Route path='/change-password' element={<ChangePassword/>}/>
       <Route path="/news" element={<NewsPage />} />
       <Route path="/contact" element={<ContactPage />} />
+      <Route path="/about" element={<AboutPage />} />
+      <Route path="/faq" element={<FAQPage />} />
 
      
       {/*  ADMIN ROUTES (Cấu trúc lồng nhau - Fix lỗi link lạ) */}
